@@ -1,0 +1,17 @@
+/.agents/
+/.vscode/
+
+# Local configuration
+/config.php
+/.user.ini
+/php.ini
+
+# Runtime data
+/logs/
+/uploads/
+*.log
+
+# Local archives and OS/editor files
+/*.zip
+.DS_Store
+Thumbs.db
