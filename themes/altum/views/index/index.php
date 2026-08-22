@@ -29,6 +29,19 @@ $landing_stats_format = function($number) {
     <div class="container index-container-content">
         <?= \Altum\Alerts::output_alerts() ?>
 
+        <div class="landing-use-now-banner" data-aos="fade-down">
+            <div>
+                <span class="landing-use-now-label">USE NOW. PAY LATER.</span>
+                <strong>Get your setup done, print your QR codes, and start serving customers for free.</strong>
+                <p>Upgrade and pay later when you need more capacity or advanced features.</p>
+            </div>
+            <?php if(!is_logged_in() && settings()->users->register_is_enabled): ?>
+                <a href="<?= url('register') ?>" class="btn btn-light rounded-pill font-weight-bold">Start free</a>
+            <?php elseif(is_logged_in()): ?>
+                <a href="<?= url('dashboard') ?>" class="btn btn-light rounded-pill font-weight-bold">Continue setup</a>
+            <?php endif ?>
+        </div>
+
         <div class="row">
             <div class="col">
                 <div class="text-left">
@@ -581,6 +594,37 @@ $landing_stats_format = function($number) {
 .index-container-content {
     position: relative;
     z-index: 1;
+}
+
+.landing-use-now-banner {
+    align-items: center;
+    background: linear-gradient(110deg, #111827, #1d4ed8);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 1rem;
+    box-shadow: 0 1rem 2.5rem rgba(29, 78, 216, .18);
+    color: #fff;
+    display: flex;
+    gap: 1.25rem;
+    justify-content: space-between;
+    margin: 1.5rem 0 2.5rem;
+    padding: 1rem 1.25rem;
+}
+
+.landing-use-now-label {
+    color: #bfdbfe;
+    display: block;
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    margin-bottom: .25rem;
+}
+
+.landing-use-now-banner strong { display: block; font-size: 1.05rem; }
+.landing-use-now-banner p { color: #dbeafe; margin: .25rem 0 0; }
+
+@media (max-width: 575.98px) {
+    .landing-use-now-banner { align-items: flex-start; flex-direction: column; }
+    .landing-use-now-banner .btn { width: 100%; }
 }
 
 .landing-stats-section {

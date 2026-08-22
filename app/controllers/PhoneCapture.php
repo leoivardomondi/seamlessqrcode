@@ -76,6 +76,7 @@ class PhoneCapture extends Controller {
         /* Clear the stored redirect after the number has been captured successfully */
         unset($_SESSION['redirect']);
 
+        $redirect_url .= (strpos($redirect_url, '?') !== false ? '&' : '?') . 'welcome_setup=1';
         Response::json('', 'success', ['redirect_url' => $redirect_url]);
     }
 

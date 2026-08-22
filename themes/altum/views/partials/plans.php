@@ -3,7 +3,38 @@
 <?php if(settings()->payment->is_enabled): ?>
 
     <?php if(is_logged_in() && !is_numeric($this->user->plan_id ?? null)): ?>
-        <?= include_view(THEME_PATH . 'views/partials/setup_planner.php') ?>
+        <div class="text-center mb-4">
+            <button type="button" class="btn btn-outline-primary rounded-2x" data-toggle="modal" data-target="#setup_planner_modal">
+                <i class="fas fa-fw fa-wand-magic-sparkles mr-1"></i> Find the right package
+            </button>
+            <div class="small text-muted mt-2">Answer a few quick questions and we’ll recommend the best fit.</div>
+        </div>
+
+        <div class="modal fade" id="setup_planner_modal" tabindex="-1" role="dialog" aria-labelledby="setup_planner_modal_title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="setup_planner_modal_title">Find your recommended package</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body p-2 p-md-3">
+                        <?= include_view(THEME_PATH . 'views/partials/setup_planner.php') ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <?php if(isset($_GET['setup_project_id']) || isset($_GET['welcome_setup'])): ?>
+            <?php ob_start() ?>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    if(window.jQuery && typeof jQuery.fn.modal === 'function') {
+                        jQuery('#setup_planner_modal').modal('show');
+                    }
+                });
+            </script>
+            <?php \Altum\Event::add_content(ob_get_clean(), 'javascript', 'setup_planner_modal') ?>
+        <?php endif ?>
     <?php endif ?>
 
     <?php

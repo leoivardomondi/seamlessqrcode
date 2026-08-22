@@ -71,6 +71,46 @@ class SetupProject extends Controller {
                 'last_datetime' => get_date(),
             ]);
 
+            /* Notify admins and superadmins about the new setup request. */
+            if(settings()->internal_notifications->admins_is_enabled) {
+                db()->insert('internal_notifications', [
+                    'for_who' => 'admin',
+                    'from_who' => 'system',
+                    'icon' => 'fas fa-wand-magic-sparkles',
+                    'title' => 'New setup request',
+                    'description' => sprintf(
+                        '%s (%s) submitted a setup request for %s. Contact: %s. Recommended package: %s.',
+                        $this->user->name,
+                        $this->user->email,
+                        $industry,
+                        $details['contact'] ?: 'Not provided',
+                        $recommendation['plan_name']
+                    ),
+                    'url' => 'admin/setup-projects/view/' . $setup_project_id,
+                    'datetime' => get_date(),
+                ]);
+            }
+
+            /* Email the configured administrators about the new setup request. */
+            if(!empty(settings()->email_notifications->emails)) {
+                $email_template = get_email_template(
+                    [],
+                    l('global.emails.admin_setup_request.subject'),
+                    [
+                        '{{USER_NAME}}' => $this->user->name,
+                        '{{USER_EMAIL}}' => $this->user->email,
+                        '{{BUSINESS_NAME}}' => $business_name ?: 'Not provided',
+                        '{{INDUSTRY}}' => $industry,
+                        '{{CONTACT}}' => $details['contact'] ?: 'Not provided',
+                        '{{PLAN_NAME}}' => $recommendation['plan_name'],
+                        '{{SETUP_LINK}}' => url('admin/setup-projects/view/' . $setup_project_id),
+                    ],
+                    l('global.emails.admin_setup_request.body')
+                );
+
+                send_mail(explode(',', settings()->email_notifications->emails), $email_template->subject, $email_template->body);
+            }
+
             Alerts::add_success('Your setup planner was saved. We recommended the best package based on your answers.');
             redirect($return_url . (str_contains($return_url, '?') ? '&' : '?') . 'setup_project_id=' . $setup_project_id . '#setup-planner');
         }

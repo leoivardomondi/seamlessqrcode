@@ -352,6 +352,14 @@ class Router {
                 ]
             ],
 
+            'onboarding-profile' => [
+                'controller' => 'OnboardingProfile',
+                'settings' => [
+                    'has_view' => false,
+                    'allow_team_access' => false,
+                ]
+            ],
+
             /* Email signatures */
             'signature-create' => [
                 'controller' => 'SignatureCreate',

@@ -1,7 +1,9 @@
 <?php defined('ALTUMCODE') || die(); ?>
 
-<?php if(is_logged_in() && isset($_GET['welcome'])): ?>
-    <?php if((user()->country ?? null) == 'KE' && empty(user()->billing->phone)): ?>
+<?php $welcome_extra = json_decode(user()->extra ?? '') ?: (object) []; ?>
+
+<?php if(is_logged_in() && (isset($_GET['welcome']) || isset($_GET['welcome_setup']))): ?>
+    <?php if(isset($_GET['welcome']) && (user()->country ?? null) == 'KE' && empty(user()->billing->phone)): ?>
         <div class="modal fade" id="welcome_phone_capture_modal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content border-0 shadow">
@@ -183,6 +185,81 @@
             })();
         </script>
         <?php \Altum\Event::add_content(ob_get_clean(), 'javascript', 'welcome_phone_capture') ?>
+    <?php endif ?>
+
+    <?php if(!(isset($_GET['welcome']) && (user()->country ?? null) == 'KE' && empty(user()->billing->phone)) && (empty(user()->billing->phone) || empty($welcome_extra->signup_industry))): ?>
+    <div class="modal fade" id="welcome_setup_modal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="welcome_setup_modal_title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body p-4 p-lg-5">
+                    <div class="mb-3 text-primary"><i class="fas fa-fw fa-wand-magic-sparkles fa-2x"></i></div>
+                    <h5 class="mb-2" id="welcome_setup_modal_title">Let’s personalize your account</h5>
+                    <p class="text-muted mb-4">Tell us what you are building and we’ll recommend the right package, prepare your account, and help you start faster. It only takes a few quick answers.</p>
+                    <form action="<?= url('onboarding-profile') ?>" method="post" data-profile-form>
+                        <input type="hidden" name="global_token" value="<?= \Altum\Csrf::get('global_token') ?>" />
+                        <div class="form-group">
+                            <label for="welcome_profile_phone">Phone number</label>
+                            <input id="welcome_profile_phone" type="tel" name="phone" class="form-control" value="<?= e(user()->billing->phone ?? '') ?>" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="+254 7XX XXX XXX" required="required" />
+                        </div>
+                        <div class="form-group">
+                            <label for="welcome_profile_industry">Industry</label>
+                            <select id="welcome_profile_industry" name="industry" class="custom-select" required="required">
+                                <option value="">Select your industry</option>
+                                <option value="restaurant" <?= ($welcome_extra->signup_industry ?? '') == 'restaurant' ? 'selected="selected"' : null ?>>Restaurant / Cafe</option>
+                                <option value="hotel" <?= ($welcome_extra->signup_industry ?? '') == 'hotel' ? 'selected="selected"' : null ?>>Hotel with outlets</option>
+                                <option value="lounge" <?= ($welcome_extra->signup_industry ?? '') == 'lounge' ? 'selected="selected"' : null ?>>Lounge / Bar / Club</option>
+                                <option value="catering" <?= ($welcome_extra->signup_industry ?? '') == 'catering' ? 'selected="selected"' : null ?>>Catering / Food truck</option>
+                                <option value="corporate" <?= ($welcome_extra->signup_industry ?? '') == 'corporate' ? 'selected="selected"' : null ?>>Corporate / Business cards</option>
+                                <option value="retail" <?= ($welcome_extra->signup_industry ?? '') == 'retail' ? 'selected="selected"' : null ?>>Retail / Shop</option>
+                                <option value="events" <?= ($welcome_extra->signup_industry ?? '') == 'events' ? 'selected="selected"' : null ?>>Events</option>
+                                <option value="other" <?= ($welcome_extra->signup_industry ?? '') == 'other' ? 'selected="selected"' : null ?>>Other business</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-danger d-none" data-profile-feedback></div>
+                        <button type="submit" class="btn btn-primary btn-block rounded-2x" data-profile-submit>Save and continue</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php ob_start() ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const setupModal = document.querySelector('#welcome_setup_modal');
+            if(!setupModal || !window.jQuery || typeof jQuery.fn.modal !== 'function') return;
+
+            const profileForm = setupModal.querySelector('[data-profile-form]');
+            const profileFeedback = setupModal.querySelector('[data-profile-feedback]');
+            const profileSubmit = setupModal.querySelector('[data-profile-submit]');
+            const originalProfileSubmit = profileSubmit ? profileSubmit.innerHTML : '';
+
+            profileForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                profileFeedback.textContent = '';
+                profileFeedback.classList.add('d-none');
+                profileSubmit.disabled = true;
+                profileSubmit.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Saving...';
+
+                try {
+                    const response = await fetch(profileForm.action, { method: 'post', credentials: 'same-origin', headers: { 'Accept': 'application/json' }, body: new FormData(profileForm) });
+                    const data = await response.json();
+                    if(!response.ok || data.status !== 'success') throw new Error(Array.isArray(data.message) ? (data.message[0] || 'Please check your details.') : (data.message || 'Please check your details.'));
+                    window.location.href = data.details.redirect_url;
+                } catch(error) {
+                    profileFeedback.textContent = error.message || 'Please check your details.';
+                    profileFeedback.classList.remove('d-none');
+                    profileSubmit.disabled = false;
+                    profileSubmit.innerHTML = originalProfileSubmit;
+                }
+            });
+
+            window.setTimeout(function () {
+                jQuery('#welcome_setup_modal').modal('show');
+            }, 500);
+        });
+    </script>
+    <?php \Altum\Event::add_content(ob_get_clean(), 'javascript', 'welcome_setup_prompt') ?>
     <?php endif ?>
 
     <?php ob_start() ?>

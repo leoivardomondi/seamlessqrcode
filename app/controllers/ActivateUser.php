@@ -59,7 +59,7 @@ class ActivateUser extends Controller {
                         [
                             '{{NAME}}' => $user->name,
                             '{{URL}}' => url(),
-                                '{{DASHBOARD_LINK}}' => url('dashboard'),
+                            '{{DASHBOARD_LINK}}' => url('dashboard'),
                         ],
                         l('global.emails.user_welcome.body')
                     );

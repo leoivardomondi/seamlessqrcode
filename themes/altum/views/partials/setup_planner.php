@@ -61,7 +61,7 @@ $recommended_plan_url = $recommended_plan_id && $recommended_plan_id != 'custom'
 
                 <label for="setup_industry">Industry</label>
                 <select id="setup_industry" name="industry" class="custom-select" data-setup-industry>
-                    <?php $saved_industry = $saved_details->industry ?? 'restaurant'; ?>
+                    <?php $saved_industry = $saved_details->industry ?? ((json_decode(user()->extra ?? '') ?: (object) [])->signup_industry ?? 'restaurant'); ?>
                     <option value="restaurant" <?= $saved_industry == 'restaurant' ? 'selected="selected"' : null ?>>Restaurant / Cafe</option>
                     <option value="hotel" <?= $saved_industry == 'hotel' ? 'selected="selected"' : null ?>>Hotel with outlets</option>
                     <option value="lounge" <?= $saved_industry == 'lounge' ? 'selected="selected"' : null ?>>Lounge / Bar / Club</option>
@@ -85,7 +85,7 @@ $recommended_plan_url = $recommended_plan_id && $recommended_plan_id != 'custom'
 
                 <div data-setup-contact-group>
                     <label for="setup_contact" class="mt-3">Contact / WhatsApp</label>
-                    <input id="setup_contact" name="contact" type="text" class="form-control" maxlength="128" placeholder="+254..." value="<?= e($saved_details->contact ?? '') ?>" />
+                    <input id="setup_contact" name="contact" type="text" class="form-control" maxlength="128" placeholder="+254..." value="<?= e($saved_details->contact ?? (user()->billing->phone ?? '')) ?>" autocomplete="tel" />
                 </div>
                 </div>
 
