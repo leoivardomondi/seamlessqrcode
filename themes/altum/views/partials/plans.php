@@ -82,7 +82,7 @@
         <?php endif ?>
 
         <div class="mb-5 text-center plan-billing-switcher">
-            <div class="plan-billing-label">Billed Annually <span>(Save 58%)</span></div>
+            <div class="plan-billing-label">Billed Annually</div>
             <div class="custom-control custom-switch plan-billing-toggle">
                 <input type="checkbox" class="custom-control-input" id="plan_billing_toggle" <?= settings()->payment->default_payment_frequency == 'monthly' ? 'checked="checked"' : null ?> />
                 <label class="custom-control-label" for="plan_billing_toggle"><span class="sr-only">Toggle billing frequency</span></label>
