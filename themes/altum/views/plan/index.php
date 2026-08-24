@@ -1,6 +1,6 @@
 <?php defined('ALTUMCODE') || die() ?>
 
-<div class="container">
+<div class="container plan-pricing-page">
     <?= \Altum\Alerts::output_alerts() ?>
 
     <?php if(is_logged_in() && $this->user->plan_is_expired && $this->user->plan_id != 'free'): ?>

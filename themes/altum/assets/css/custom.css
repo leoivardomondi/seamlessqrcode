@@ -1744,3 +1744,193 @@ i.xl {
 	height: 2.25rem;
 }
 
+/* Pricing page refresh */
+.plan-pricing-page {
+	--plan-accent: #4846d8;
+	--plan-text: #171717;
+	--plan-muted: #575757;
+	max-width: 1120px;
+}
+
+.plan-pricing-page > .text-center:first-child h1 {
+	color: var(--plan-text);
+	font-size: clamp(2rem, 4vw, 2.8rem);
+	letter-spacing: -.04em;
+}
+
+.plan-pricing-page > .text-center:first-child p {
+	color: var(--plan-muted) !important;
+}
+
+.plan-billing-switcher {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: .8rem;
+}
+
+.plan-billing-label {
+	color: var(--plan-text);
+	font-size: .95rem;
+	font-weight: 500;
+}
+
+.plan-billing-label span {
+	color: var(--plan-accent);
+}
+
+.plan-billing-toggle {
+	padding-left: 2.65rem;
+}
+
+.plan-billing-toggle .custom-control-label::before {
+	left: 0;
+	width: 2.35rem;
+	height: 1.35rem;
+	border: 0;
+	border-radius: 999px;
+	background: #d8d8d8;
+}
+
+.plan-billing-toggle .custom-control-label::after {
+	top: calc(.25rem + 2px);
+	left: .25rem;
+	width: .9rem;
+	height: .9rem;
+	border-radius: 50%;
+	background: #fff;
+}
+
+.plan-billing-toggle .custom-control-input:checked ~ .custom-control-label::before {
+	background: var(--plan-accent);
+}
+
+.plan-billing-toggle .custom-control-input:checked ~ .custom-control-label::after {
+	transform: translateX(1rem);
+}
+
+.plan-pricing-page .pricing-plan {
+	border-width: 1px !important;
+	border-radius: 12px !important;
+	box-shadow: 0 5px 12px rgba(20, 20, 20, .10);
+	overflow: hidden;
+	background: #fff;
+}
+
+.plan-pricing-page .row.justify-content-around > [class*="col-"]:nth-child(1) .pricing-plan {
+	border-color: #d7d7d7 !important;
+}
+
+.plan-pricing-page .row.justify-content-around > [class*="col-"]:nth-child(2) .pricing-plan {
+	border-color: #5b8cff !important;
+}
+
+.plan-pricing-page .row.justify-content-around > [class*="col-"]:nth-child(3) .pricing-plan {
+	border-color: #4a2bd6 !important;
+}
+
+.plan-pricing-page .pricing-header {
+	display: block;
+	padding: 1.8rem 1.55rem 0;
+	background: #fff;
+	border-bottom: 0;
+	border-radius: 0;
+}
+
+.plan-pricing-page .pricing-name {
+	margin: 0 0 .55rem;
+	padding: 0;
+	color: var(--plan-text) !important;
+	font-size: 1.85rem;
+	font-weight: 500;
+	letter-spacing: -.04em;
+	text-transform: none;
+	border-radius: 0;
+}
+
+.plan-pricing-page .pricing-price {
+	margin: 1.35rem 0 1.1rem;
+}
+
+.plan-pricing-page .pricing-price-amount {
+	font-size: 2rem;
+	font-weight: 500;
+	letter-spacing: -.04em;
+}
+
+.plan-pricing-page .pricing-details {
+	text-align: left;
+	font-size: .9rem;
+	color: var(--plan-muted);
+	margin-bottom: 0;
+}
+
+.plan-pricing-page .pricing-body {
+	padding: 0 1.55rem 1.7rem;
+	background: #fff;
+	border-radius: 0;
+}
+
+.plan-pricing-page .pricing-features {
+	order: 2;
+	margin: 1rem 0 0;
+	padding: .7rem 0 0;
+	border-top: 1px solid #bdbdbd;
+}
+
+.plan-pricing-page .pricing-features li {
+	justify-content: flex-start;
+	align-items: flex-start;
+	gap: .65rem;
+	margin: .72rem 0;
+	color: var(--plan-text);
+	font-size: .86rem;
+	line-height: 1.35;
+}
+
+.plan-pricing-page .pricing-features li i {
+	order: -1;
+	flex: 0 0 auto;
+	margin-top: .1rem;
+	color: #202020 !important;
+}
+
+.plan-pricing-page .pricing-body > a.btn {
+	order: 1;
+	margin-top: 1rem;
+	min-height: 48px;
+	border: 0 !important;
+	border-radius: 999px !important;
+	background: var(--plan-accent) !important;
+	font-size: .95rem;
+	font-weight: 600;
+	box-shadow: none;
+}
+
+.plan-pricing-page .pricing-body > a.btn:hover,
+.plan-pricing-page .pricing-body > a.btn:focus {
+	background: #3937bd !important;
+}
+
+.plan-pricing-page .row.justify-content-around {
+	align-items: stretch;
+}
+
+.plan-pricing-page .row.justify-content-around > [class*="col-"] {
+	padding: .75rem;
+}
+
+@media (max-width: 575px) {
+	.plan-billing-switcher {
+		flex-wrap: wrap;
+		gap: .55rem;
+	}
+
+	.plan-billing-label {
+		font-size: .85rem;
+	}
+
+	.plan-pricing-page .pricing-name {
+		font-size: 1.65rem;
+	}
+}

@@ -81,8 +81,15 @@
             </div>
         <?php endif ?>
 
-        <div class="mb-5 text-center">
-            <div class="btn-group btn-group-toggle btn-group-custom" data-toggle="buttons">
+        <div class="mb-5 text-center plan-billing-switcher">
+            <div class="plan-billing-label">Billed Annually <span>(Save 58%)</span></div>
+            <div class="custom-control custom-switch plan-billing-toggle">
+                <input type="checkbox" class="custom-control-input" id="plan_billing_toggle" <?= settings()->payment->default_payment_frequency == 'monthly' ? 'checked="checked"' : null ?> />
+                <label class="custom-control-label" for="plan_billing_toggle"><span class="sr-only">Toggle billing frequency</span></label>
+            </div>
+            <div class="plan-billing-label">Billed Monthly</div>
+
+            <div class="btn-group btn-group-toggle btn-group-custom d-none" data-toggle="buttons">
 
                 <?php
                 $frequencies = \Altum\Router::$controller == 'Lifetime'
@@ -330,6 +337,11 @@
                 };
 
                 $('[data-payment-frequency]').on('click', payment_frequency_handler);
+
+                $('#plan_billing_toggle').on('change', function () {
+                    const frequency = this.checked ? 'monthly' : 'annual';
+                    $(`[data-payment-frequency="${frequency}"]`).trigger('click');
+                });
 
                 payment_frequency_handler();
             </script>
