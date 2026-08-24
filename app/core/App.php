@@ -153,7 +153,7 @@ class App {
                 cache()->deleteItemsByTag('user_id=' .  \Altum\Authentication::$user_id);
 
                 /* Make sure to redirect the person to the payment page and only let the person access the following pages */
-                if(!in_array(\Altum\Router::$controller_key, ['index', 'dashboard', 'blog', 'affiliate', 'contact', 'page', 'pages', 'plan', 'setup-project', 'pay', 'pay-billing', 'pay-thank-you', 'account', 'account-plan', 'account-billing', 'account-payments', 'invoice', 'account-logs', 'account-preferences',  'account-delete', 'referrals', 'account-api', 'account-redeem-code', 'phone-capture', 'logout', 'register', 'teams-system', 'teams-member', 'teams-members']) && \Altum\Router::$path != 'admin') {
+                if(!in_array(\Altum\Router::$controller_key, ['index', 'dashboard', 'blog', 'affiliate', 'contact', 'page', 'pages', 'plan', 'setup-project', 'pay', 'pay-billing', 'pay-thank-you', 'account', 'account-plan', 'account-billing', 'account-payments', 'invoice', 'account-logs', 'account-preferences',  'account-delete', 'referrals', 'account-api', 'account-redeem-code', 'phone-capture', 'onboarding-profile', 'logout', 'register', 'teams-system', 'teams-member', 'teams-members']) && \Altum\Router::$path != 'admin') {
                     redirect('plan/new');
                 }
             }
