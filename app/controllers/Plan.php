@@ -29,6 +29,16 @@ class Plan extends Controller {
             throw_404();
         }
 
+        /* New users must complete the phone and industry setup before seeing plans. */
+        if(is_logged_in()) {
+            $user_extra = json_decode($this->user->extra ?? '') ?: (object) [];
+            $user_phone = preg_replace('/\D+/', '', (string) ($this->user->billing->phone ?? ''));
+
+            if(!$user_phone || empty($user_extra->signup_industry)) {
+                redirect('dashboard?welcome=1');
+            }
+        }
+
         $type = isset($this->params[0]) && in_array($this->params[0], ['renew', 'upgrade', 'new']) ? $this->params[0] : 'new';
 
         /* If the user is not logged in when trying to upgrade or renew, make sure to redirect them */

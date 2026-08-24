@@ -2,6 +2,7 @@
 <?php
 $setup_project_model = new \Altum\Models\SetupProject();
 $submitted_setup_project_id = isset($_GET['setup_project_id']) ? (int) $_GET['setup_project_id'] : null;
+$retry_setup = isset($_GET['retry_setup']) && $_GET['retry_setup'] == '1';
 $setup_project = $submitted_setup_project_id ? $setup_project_model->get_by_user_id_and_project_id(user()->user_id, $submitted_setup_project_id) : null;
 $saved_details = $setup_project->details ?? null;
 $pricing_context = \Altum\Router::$controller == 'Lifetime' ? 'lifetime' : 'recurring';
@@ -42,6 +43,14 @@ $recommended_plan_url = $recommended_plan_id && $recommended_plan_id != 'custom'
         </div>
     <?php endif ?>
 
+    <?php if($setup_project && !$retry_setup): ?>
+        <div class="text-center py-4">
+            <p class="mb-3">We used your answers to recommend the package above.</p>
+            <a href="<?= url('plan?welcome_setup=1&retry_setup=1') ?>#setup-planner" class="btn btn-outline-primary rounded-2x">
+                <i class="fas fa-fw fa-rotate-left mr-1"></i> Try again
+            </a>
+        </div>
+    <?php else: ?>
     <form action="<?= url('setup-project') ?>" method="post" enctype="multipart/form-data" class="setup-planner-form" data-setup-planner-form>
         <input type="hidden" name="token" value="<?= \Altum\Csrf::get() ?>" />
         <input type="hidden" name="return_url" value="<?= e(\Altum\Router::$original_request . (\Altum\Router::$original_request_query ? '?' . \Altum\Router::$original_request_query : null)) ?>" />
@@ -207,6 +216,7 @@ $recommended_plan_url = $recommended_plan_id && $recommended_plan_id != 'custom'
             </div>
         </div>
     </form>
+    <?php endif ?>
 </section>
 
 <?php ob_start() ?>
