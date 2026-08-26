@@ -65,7 +65,11 @@ class AdminUserView extends Controller {
             $user->plan->settings = $user->plan_settings;
         }
 
-        $user->billing = json_decode($user->billing ?? '');
+        $user->billing = json_decode($user->billing ?? '') ?: (object) [];
+        if(!\Altum\Authentication::is_superadmin()) {
+            unset($user->billing->phone);
+        }
+        $user->extra = json_decode($user->extra ?? '') ?: (object) [];
 
         /* Main View */
         $data = [

@@ -2,8 +2,8 @@
 
 <?php $welcome_extra = json_decode(user()->extra ?? '') ?: (object) []; ?>
 
-<?php if(is_logged_in() && (isset($_GET['welcome']) || isset($_GET['welcome_setup']))): ?>
-    <?php if(isset($_GET['welcome']) && (user()->country ?? null) == 'KE' && empty(user()->billing->phone)): ?>
+<?php if(is_logged_in()): ?>
+    <?php if((user()->country ?? null) == 'KE' && empty(user()->billing->phone)): ?>
         <div class="modal fade" id="welcome_phone_capture_modal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content border-0 shadow">
@@ -187,7 +187,8 @@
         <?php \Altum\Event::add_content(ob_get_clean(), 'javascript', 'welcome_phone_capture') ?>
     <?php endif ?>
 
-    <?php if(!(isset($_GET['welcome']) && (user()->country ?? null) == 'KE' && empty(user()->billing->phone)) && (empty(user()->billing->phone) || empty($welcome_extra->signup_industry))): ?>
+    <?php if(isset($_GET['welcome']) || isset($_GET['welcome_setup'])): ?>
+    <?php if(!((user()->country ?? null) == 'KE' && empty(user()->billing->phone)) && (empty(user()->billing->phone) || empty($welcome_extra->signup_industry))): ?>
     <div class="modal fade" id="welcome_setup_modal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="welcome_setup_modal_title" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content border-0 shadow">
@@ -278,5 +279,6 @@
 
     <?php if(!empty(settings()->custom->welcome_js)): ?>
         <?= get_settings_custom_head_js('welcome_js') ?>
+    <?php endif ?>
     <?php endif ?>
 <?php endif ?>

@@ -54,6 +54,18 @@
                     <input id="name" type="text" class="form-control-plaintext" value="<?= $data->user->name ?>" readonly />
                 </div>
 
+                <?php if(\Altum\Authentication::is_superadmin()): ?>
+                    <div class="form-group">
+                        <label for="onboarding_phone" class="font-weight-bold"><i class="fas fa-fw fa-sm fa-phone text-muted mr-1"></i> Phone number</label>
+                        <input id="onboarding_phone" type="text" class="form-control-plaintext" value="<?= e($data->user->billing->phone ?? l('global.none')) ?>" readonly />
+                    </div>
+                <?php endif ?>
+
+                <div class="form-group">
+                    <label for="onboarding_industry" class="font-weight-bold"><i class="fas fa-fw fa-sm fa-building text-muted mr-1"></i> Industry</label>
+                    <input id="onboarding_industry" type="text" class="form-control-plaintext" value="<?= e($data->user->extra->signup_industry ?? l('global.none')) ?>" readonly />
+                </div>
+
                 <div class="form-group">
                     <label for="language" class="font-weight-bold"><i class="fas fa-fw fa-sm fa-language text-muted mr-1"></i> <?= l('global.language') ?></label>
                     <input id="language" type="text" class="form-control-plaintext" value="<?= $data->user->language ?>" readonly />
