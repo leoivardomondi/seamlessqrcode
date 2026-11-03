@@ -41,6 +41,9 @@ class Invoice extends Controller {
 
         /* Try to see if we get details from the billing */
         $payment->billing = json_decode($payment->billing ?? '');
+        if(empty($payment->billing->name) && !empty($this->user->billing->name)) {
+            $payment->billing = $this->user->billing;
+        }
         $payment->business = json_decode($payment->business ?? '');
         $payment->plan = json_decode($payment->plan ?? '');
 
@@ -267,13 +270,18 @@ class Invoice extends Controller {
             $period_end = (new Subscription())->calculate_period_end($period_start, $invoice->frequency);
         }
 
+        $invoice_billing = json_decode($invoice->billing ?? '');
+        if(empty($invoice_billing->name) && !empty($this->user->billing->name)) {
+            $invoice_billing = $this->user->billing;
+        }
+
         $payment = (object) [
             'id' => $invoice->invoice_id,
             'invoice_number' => $invoice->invoice_id,
             'invoice_status' => $invoice->status,
             'is_proforma' => $invoice->type == 'proforma',
             'plan_id' => $invoice->plan_id,
-            'billing' => json_decode($invoice->billing ?? ''),
+            'billing' => $invoice_billing,
             'business' => $business,
             'plan' => (object) ['name' => $item->description ?? $plan->name ?? $invoice->plan_id],
             'plan_db' => $plan,
@@ -300,6 +308,9 @@ class Invoice extends Controller {
 
     private function prepare_payment_pdf_document($payment) {
         $payment->billing = json_decode($payment->billing ?? '');
+        if(empty($payment->billing->name) && !empty($this->user->billing->name)) {
+            $payment->billing = $this->user->billing;
+        }
         $payment->business = json_decode($payment->business ?? '');
         $payment->plan = json_decode($payment->plan ?? '');
 

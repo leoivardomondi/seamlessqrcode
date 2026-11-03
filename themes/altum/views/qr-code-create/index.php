@@ -111,7 +111,7 @@
                                     <a href="<?= url('links') ?>" target="_blank" class="small mb-2"><i class="fas fa-fw fa-sm fa-plus mr-1"></i> <?= l('global.create') ?></a>
                                 </div>
                                 <select id="link_id" name="link_id" class="custom-select" data-reload-qr-code>
-                                    <option value="" data-url="<?= SITE_URL . ($data->values['dynamic_url_slug'] ?? null) ?>" data-location-url=""><?= l('global.none') ?> - <?= l('qr_codes.input.link_id_auto_create') ?></option>
+                                    <option value="" data-url="<?= get_default_dynamic_domain_url() . ($data->values['dynamic_url_slug'] ?? null) ?>" data-location-url=""><?= l('global.none') ?> - <?= l('qr_codes.input.link_id_auto_create') ?></option>
                                     <?php foreach($data->links as $row): ?>
                                         <option value="<?= $row->link_id ?>" <?= ($data->values['link_id'] ?? null) == $row->link_id ? 'selected="selected"' : null?> data-url="<?= $row->full_url ?>" data-location-url="<?= $row->location_url ?>">
                                             <?= remove_url_protocol_from_url($row->full_url) . ($row->location_url ? ' -> ' . remove_url_protocol_from_url($row->location_url) : null) ?>

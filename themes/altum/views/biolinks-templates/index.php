@@ -93,7 +93,7 @@
                             <h2 class="h6"><?= $biolink_template->name ?></h2>
                         </div>
 
-                        <a href="<?= $biolink_template->url ?>" target="_blank" class="btn btn-block btn-sm btn-light"><i class="fas fa-fw fa-sm fa-external-link-alt mr-1"></i> <?= l('biolinks_templates.preview') ?></a>
+                        <a href="<?= $biolink_template->url . (str_contains($biolink_template->url, '?') ? '&' : '?') . 'preview_template' ?>" target="_blank" class="btn btn-block btn-sm btn-light"><i class="fas fa-fw fa-sm fa-external-link-alt mr-1"></i> <?= l('biolinks_templates.preview') ?></a>
 
                         <div class="mt-2" <?= in_array($biolink_template->biolink_template_id, $this->user->plan_settings->biolinks_templates ?? []) ? null : get_plan_feature_disabled_info() ?>>
                             <button type="button" class="btn btn-block btn-sm btn-primary <?= in_array($biolink_template->biolink_template_id, $this->user->plan_settings->biolinks_templates ?? []) ? null : 'container-disabled' ?>" data-toggle="modal" data-target="#create_biolink" onclick="document.querySelector(`input[name='biolink_template_id']`).value = <?= $biolink_template->biolink_template_id ?>;">

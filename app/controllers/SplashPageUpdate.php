@@ -44,6 +44,8 @@ class SplashPageUpdate extends Controller {
 
         $splash_page->settings = json_decode($splash_page->settings ?? '');
 
+        $notification_handlers = (new \Altum\Models\NotificationHandlers())->get_notification_handlers_by_user_id($this->user->user_id);
+
         if(!empty($_POST)) {
             $_POST['name'] = input_clean($_POST['name'], 64);
             $_POST['title'] = input_clean($_POST['title'], 256);
@@ -57,12 +59,65 @@ class SplashPageUpdate extends Controller {
             $_POST['link_unlock_seconds'] = (int) $_POST['link_unlock_seconds'];
             $_POST['auto_redirect'] = (int) isset($_POST['auto_redirect']);
 
+            /* Appearance & Colors */
+            $_POST['background_type'] = in_array($_POST['background_type'] ?? '', ['default', 'color', 'gradient', 'image']) ? $_POST['background_type'] : 'default';
+            $_POST['background_color'] = input_clean($_POST['background_color'] ?? '#0f0f10', 32);
+            $_POST['background_color_one'] = input_clean($_POST['background_color_one'] ?? '#18181b', 32);
+            $_POST['background_color_two'] = input_clean($_POST['background_color_two'] ?? '#09090b', 32);
+            $_POST['background_gradient_direction'] = input_clean($_POST['background_gradient_direction'] ?? '135deg', 32);
+            $_POST['title_color'] = input_clean($_POST['title_color'] ?? '#f4f4f5', 32);
+            $_POST['description_color'] = input_clean($_POST['description_color'] ?? '#a1a1aa', 32);
+
+            /* Buttons styling */
+            $_POST['primary_button_name'] = input_clean($_POST['primary_button_name'] ?? '', 256);
+            $_POST['primary_button_background_color'] = input_clean($_POST['primary_button_background_color'] ?? '#eab308', 32);
+            $_POST['primary_button_text_color'] = input_clean($_POST['primary_button_text_color'] ?? '#000000', 32);
+            $_POST['primary_button_border_radius'] = in_array($_POST['primary_button_border_radius'] ?? '', ['rounded', 'rounded-pill', 'rounded-0', 'rounded-sm', 'rounded-lg']) ? $_POST['primary_button_border_radius'] : 'rounded';
+
+            $_POST['secondary_button_background_color'] = input_clean($_POST['secondary_button_background_color'] ?? '#27272a', 32);
+            $_POST['secondary_button_text_color'] = input_clean($_POST['secondary_button_text_color'] ?? '#ffffff', 32);
+            $_POST['secondary_button_border_radius'] = in_array($_POST['secondary_button_border_radius'] ?? '', ['rounded', 'rounded-pill', 'rounded-0', 'rounded-sm', 'rounded-lg']) ? $_POST['secondary_button_border_radius'] : 'rounded';
+
+            /* Details Capture Form */
+            $_POST['details_form_is_enabled'] = (bool) isset($_POST['details_form_is_enabled']);
+            $_POST['form_title'] = input_clean($_POST['form_title'] ?? '', 512);
+            $_POST['form_subtitle'] = input_clean($_POST['form_subtitle'] ?? '', 512);
+            $_POST['form_card_background_color'] = input_clean($_POST['form_card_background_color'] ?? '#18181b', 32);
+            $_POST['form_card_text_color'] = input_clean($_POST['form_card_text_color'] ?? '#f4f4f5', 32);
+            $_POST['form_card_border_color'] = input_clean($_POST['form_card_border_color'] ?? '#27272a', 32);
+
+            $_POST['form_show_name'] = (bool) isset($_POST['form_show_name']);
+            $_POST['form_name_label'] = input_clean($_POST['form_name_label'] ?? '', 128);
+            $_POST['form_name_placeholder'] = input_clean($_POST['form_name_placeholder'] ?? '', 128);
+            $_POST['form_name_required'] = (bool) isset($_POST['form_name_required']);
+
+            $_POST['form_show_phone'] = (bool) isset($_POST['form_show_phone']);
+            $_POST['form_phone_label'] = input_clean($_POST['form_phone_label'] ?? '', 128);
+            $_POST['form_phone_placeholder'] = input_clean($_POST['form_phone_placeholder'] ?? '', 128);
+            $_POST['form_phone_required'] = (bool) isset($_POST['form_phone_required']);
+
+            $_POST['form_show_email'] = (bool) isset($_POST['form_show_email']);
+            $_POST['form_email_label'] = input_clean($_POST['form_email_label'] ?? '', 128);
+            $_POST['form_email_placeholder'] = input_clean($_POST['form_email_placeholder'] ?? '', 128);
+            $_POST['form_email_required'] = (bool) isset($_POST['form_email_required']);
+
+            $_POST['form_show_consent'] = (bool) isset($_POST['form_show_consent']);
+            $_POST['form_consent_text'] = input_clean($_POST['form_consent_text'] ?? '', 512);
+            $_POST['form_consent_required'] = (bool) isset($_POST['form_consent_required']);
+
+            $_POST['form_submit_button_text'] = input_clean($_POST['form_submit_button_text'] ?? '', 128);
+            $_POST['form_submit_button_background_color'] = input_clean($_POST['form_submit_button_background_color'] ?? '#eab308', 32);
+            $_POST['form_submit_button_text_color'] = input_clean($_POST['form_submit_button_text_color'] ?? '#000000', 32);
+            $_POST['form_skip_button_text'] = input_clean($_POST['form_skip_button_text'] ?? '', 128);
+            $_POST['form_success_message'] = input_clean($_POST['form_success_message'] ?? '', 256);
+
             //ALTUMCODE:DEMO if(DEMO) if($this->user->user_id == 1) Alerts::add_error('Please create an account on the demo to test out this function.');
 
             /* Image uploads */
-            $logo = \Altum\Uploads::process_upload($splash_page->settings->logo, 'splash_pages', 'logo', 'logo_remove', settings()->links->avatar_size_limit);
-            $favicon = \Altum\Uploads::process_upload($splash_page->settings->favicon, 'splash_pages', 'favicon', 'favicon_remove', settings()->links->favicon_size_limit);
-            $opengraph = \Altum\Uploads::process_upload($splash_page->settings->opengraph, 'splash_pages', 'opengraph', 'opengraph_remove', settings()->links->seo_image_size_limit);
+            $logo = \Altum\Uploads::process_upload($splash_page->settings->logo ?? null, 'splash_pages', 'logo', 'logo_remove', settings()->links->avatar_size_limit);
+            $favicon = \Altum\Uploads::process_upload($splash_page->settings->favicon ?? null, 'splash_pages', 'favicon', 'favicon_remove', settings()->links->favicon_size_limit);
+            $opengraph = \Altum\Uploads::process_upload($splash_page->settings->opengraph ?? null, 'splash_pages', 'opengraph', 'opengraph_remove', settings()->links->seo_image_size_limit);
+            $background = \Altum\Uploads::process_upload($splash_page->settings->background ?? null, 'splash_pages', 'background', 'background_remove', settings()->links->background_size_limit ?? 5000000);
 
             /* Check for any errors */
             $required_fields = ['name'];
@@ -81,12 +136,60 @@ class SplashPageUpdate extends Controller {
                     'logo' => $logo,
                     'favicon' => $favicon,
                     'opengraph' => $opengraph,
+                    'background' => $background,
                     'secondary_button_name' => $_POST['secondary_button_name'],
                     'secondary_button_url' => $_POST['secondary_button_url'],
                     'custom_css' => $_POST['custom_css'],
                     'custom_js' => $_POST['custom_js'],
                     'ads_header' => $_POST['ads_header'],
                     'ads_footer' => $_POST['ads_footer'],
+
+                    /* Appearance & Colors */
+                    'background_type' => $_POST['background_type'],
+                    'background_color' => $_POST['background_color'],
+                    'background_color_one' => $_POST['background_color_one'],
+                    'background_color_two' => $_POST['background_color_two'],
+                    'background_gradient_direction' => $_POST['background_gradient_direction'],
+                    'title_color' => $_POST['title_color'],
+                    'description_color' => $_POST['description_color'],
+
+                    /* Buttons */
+                    'primary_button_name' => $_POST['primary_button_name'],
+                    'primary_button_background_color' => $_POST['primary_button_background_color'],
+                    'primary_button_text_color' => $_POST['primary_button_text_color'],
+                    'primary_button_border_radius' => $_POST['primary_button_border_radius'],
+                    'secondary_button_background_color' => $_POST['secondary_button_background_color'],
+                    'secondary_button_text_color' => $_POST['secondary_button_text_color'],
+                    'secondary_button_border_radius' => $_POST['secondary_button_border_radius'],
+
+                    /* Details Capture Form */
+                    'details_form_is_enabled' => $_POST['details_form_is_enabled'],
+                    'form_title' => $_POST['form_title'],
+                    'form_subtitle' => $_POST['form_subtitle'],
+                    'form_card_background_color' => $_POST['form_card_background_color'],
+                    'form_card_text_color' => $_POST['form_card_text_color'],
+                    'form_card_border_color' => $_POST['form_card_border_color'],
+                    'form_show_name' => $_POST['form_show_name'],
+                    'form_name_label' => $_POST['form_name_label'],
+                    'form_name_placeholder' => $_POST['form_name_placeholder'],
+                    'form_name_required' => $_POST['form_name_required'],
+                    'form_show_phone' => $_POST['form_show_phone'],
+                    'form_phone_label' => $_POST['form_phone_label'],
+                    'form_phone_placeholder' => $_POST['form_phone_placeholder'],
+                    'form_phone_required' => $_POST['form_phone_required'],
+                    'form_show_email' => $_POST['form_show_email'],
+                    'form_email_label' => $_POST['form_email_label'],
+                    'form_email_placeholder' => $_POST['form_email_placeholder'],
+                    'form_email_required' => $_POST['form_email_required'],
+                    'form_show_consent' => $_POST['form_show_consent'],
+                    'form_consent_text' => $_POST['form_consent_text'],
+                    'form_consent_required' => $_POST['form_consent_required'],
+                    'form_submit_button_text' => $_POST['form_submit_button_text'],
+                    'form_submit_button_background_color' => $_POST['form_submit_button_background_color'],
+                    'form_submit_button_text_color' => $_POST['form_submit_button_text_color'],
+                    'form_skip_button_text' => $_POST['form_skip_button_text'],
+                    'form_success_message' => $_POST['form_success_message'],
+                    'notifications' => array_map('intval', $_POST['notifications'] ?? []),
                 ]);
 
                 /* Database query */
@@ -109,6 +212,50 @@ class SplashPageUpdate extends Controller {
                 redirect('splash-page-update/' . $splash_page_id);
             }
         }
+
+        /* Default fallback values for existing splash pages */
+        $splash_page->settings->background_type = $splash_page->settings->background_type ?? 'default';
+        $splash_page->settings->background_color = $splash_page->settings->background_color ?? '#0f0f10';
+        $splash_page->settings->background_color_one = $splash_page->settings->background_color_one ?? '#18181b';
+        $splash_page->settings->background_color_two = $splash_page->settings->background_color_two ?? '#09090b';
+        $splash_page->settings->background_gradient_direction = $splash_page->settings->background_gradient_direction ?? '135deg';
+        $splash_page->settings->background = $splash_page->settings->background ?? null;
+        $splash_page->settings->title_color = $splash_page->settings->title_color ?? '#f4f4f5';
+        $splash_page->settings->description_color = $splash_page->settings->description_color ?? '#a1a1aa';
+        $splash_page->settings->primary_button_name = $splash_page->settings->primary_button_name ?? '';
+        $splash_page->settings->primary_button_background_color = $splash_page->settings->primary_button_background_color ?? '#eab308';
+        $splash_page->settings->primary_button_text_color = $splash_page->settings->primary_button_text_color ?? '#000000';
+        $splash_page->settings->primary_button_border_radius = $splash_page->settings->primary_button_border_radius ?? 'rounded';
+        $splash_page->settings->secondary_button_background_color = $splash_page->settings->secondary_button_background_color ?? '#27272a';
+        $splash_page->settings->secondary_button_text_color = $splash_page->settings->secondary_button_text_color ?? '#ffffff';
+        $splash_page->settings->secondary_button_border_radius = $splash_page->settings->secondary_button_border_radius ?? 'rounded';
+
+        $splash_page->settings->details_form_is_enabled = $splash_page->settings->details_form_is_enabled ?? false;
+        $splash_page->settings->form_title = $splash_page->settings->form_title ?? l('splash_pages.form_title_default');
+        $splash_page->settings->form_subtitle = $splash_page->settings->form_subtitle ?? '';
+        $splash_page->settings->form_card_background_color = $splash_page->settings->form_card_background_color ?? '#18181b';
+        $splash_page->settings->form_card_text_color = $splash_page->settings->form_card_text_color ?? '#f4f4f5';
+        $splash_page->settings->form_card_border_color = $splash_page->settings->form_card_border_color ?? '#27272a';
+        $splash_page->settings->form_show_name = $splash_page->settings->form_show_name ?? true;
+        $splash_page->settings->form_name_label = $splash_page->settings->form_name_label ?? l('splash_pages.form_name_label_default');
+        $splash_page->settings->form_name_placeholder = $splash_page->settings->form_name_placeholder ?? l('splash_pages.form_name_placeholder_default');
+        $splash_page->settings->form_name_required = $splash_page->settings->form_name_required ?? false;
+        $splash_page->settings->form_show_phone = $splash_page->settings->form_show_phone ?? true;
+        $splash_page->settings->form_phone_label = $splash_page->settings->form_phone_label ?? l('splash_pages.form_phone_label_default');
+        $splash_page->settings->form_phone_placeholder = $splash_page->settings->form_phone_placeholder ?? l('splash_pages.form_phone_placeholder_default');
+        $splash_page->settings->form_phone_required = $splash_page->settings->form_phone_required ?? false;
+        $splash_page->settings->form_show_email = $splash_page->settings->form_show_email ?? true;
+        $splash_page->settings->form_email_label = $splash_page->settings->form_email_label ?? l('splash_pages.form_email_label_default');
+        $splash_page->settings->form_email_placeholder = $splash_page->settings->form_email_placeholder ?? l('splash_pages.form_email_placeholder_default');
+        $splash_page->settings->form_email_required = $splash_page->settings->form_email_required ?? false;
+        $splash_page->settings->form_show_consent = $splash_page->settings->form_show_consent ?? true;
+        $splash_page->settings->form_consent_text = $splash_page->settings->form_consent_text ?? l('splash_pages.form_consent_text_default');
+        $splash_page->settings->form_consent_required = $splash_page->settings->form_consent_required ?? false;
+        $splash_page->settings->form_submit_button_text = $splash_page->settings->form_submit_button_text ?? l('splash_pages.form_submit_button_text_default');
+        $splash_page->settings->form_submit_button_background_color = $splash_page->settings->form_submit_button_background_color ?? '#eab308';
+        $splash_page->settings->form_submit_button_text_color = $splash_page->settings->form_submit_button_text_color ?? '#000000';
+        $splash_page->settings->form_skip_button_text = $splash_page->settings->form_skip_button_text ?? l('splash_pages.form_skip_button_text_default');
+        $splash_page->settings->form_success_message = $splash_page->settings->form_success_message ?? l('splash_pages.form_success_message_default');
 
         /* Prepare the view */
         $data = [

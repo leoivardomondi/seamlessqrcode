@@ -144,7 +144,7 @@ class QrCodeGenerator extends Controller {
                         $dynamic_url_slug = get_slug($_POST['dynamic_url_slug'], '-', false);
 
                         if($dynamic_url_slug) {
-                            $data = get_full_url_from_link_url($dynamic_url_slug);
+                            $data = get_full_url_from_link_url($dynamic_url_slug, get_default_dynamic_domain_id());
                         }
                     }
                 }

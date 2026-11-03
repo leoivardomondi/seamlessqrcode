@@ -91,7 +91,7 @@
         <?php endif ?>
     </head>
 
-    <?php if(!isset($_GET['preview_template'], $_GET['preview'])): ?>
+    <?php if(!isset($_GET['preview_template']) && !isset($_GET['preview']) && \Altum\Router::$controller != 'BiolinksTemplates'): ?>
         <?php require THEME_PATH . 'views/partials/cookie_consent.php' ?>
     <?php endif ?>
 

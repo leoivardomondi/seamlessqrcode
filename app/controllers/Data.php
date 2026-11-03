@@ -63,6 +63,10 @@ class Data extends Controller {
             $row->settings = json_decode($row->settings ?? '');
             $row->biolink_block_name = $row->settings->name ?? null;
 
+            if($row->type == 'splash_page') {
+                $row->biolink_block_name = $row->data->splash_page_name ?? l('splash_pages.splash_page_id');
+            }
+
             $data[] = $row;
         }
 

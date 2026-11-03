@@ -94,23 +94,28 @@ class Pay extends Controller {
                 if($this->plan_taxes) {
                     foreach($this->plan_taxes as $key => $value) {
 
+                        $user_billing_type = $this->user->billing->type ?? 'personal';
+                        $user_billing_country = $this->user->billing->country ?? null;
+                        $user_billing_state = $this->user->billing->state ?? null;
+                        $user_billing_county = $this->user->billing->county ?? null;
+
                         /* Type */
-                        if($value->billing_type != $this->user->billing->type && $value->billing_type != 'both') {
+                        if($value->billing_type != $user_billing_type && $value->billing_type != 'both') {
                             unset($this->plan_taxes[$key]);
                         }
 
                         /* Countries */
-                        if($value->countries && !in_array($this->user->billing->country, $value->countries)) {
+                        if($value->countries && (!empty($user_billing_country) ? !in_array($user_billing_country, $value->countries) : false)) {
                             unset($this->plan_taxes[$key]);
                         }
 
                         /* State */
-                        if(!empty($value->state) && $value->state != $this->user->billing->state) {
+                        if(!empty($value->state) && $value->state != $user_billing_state) {
                             unset($this->plan_taxes[$key]);
                         }
 
                         /* County */
-                        if(!empty($value->county) && $value->county != $this->user->billing->county) {
+                        if(!empty($value->county) && $value->county != $user_billing_county) {
                             unset($this->plan_taxes[$key]);
                         }
 
@@ -132,6 +137,8 @@ class Pay extends Controller {
             redirect('plan');
         }
 
+        /* Allow users to pay directly without filling billing details first; they can update billing info later for invoice generation */
+        /*
         if(
             settings()->payment->taxes_and_billing_is_enabled
             && ($this->user->plan_trial_done || !$this->plan->trial_days || isset($_GET['trial_skip']))
@@ -139,6 +146,7 @@ class Pay extends Controller {
         ) {
             redirect('pay-billing/' . $this->plan_id . '?' . (isset($_GET['trial_skip']) ? '&trial_skip=true' : null) . (isset($_GET['code']) ? '&code=' . $_GET['code'] : null));
         }
+        */
 
         /* Form submission processing */
         if(!empty($_POST) && !$this->return_type) {
@@ -1198,6 +1206,11 @@ class Pay extends Controller {
         $trial_skip_parameter = isset($_GET['trial_skip']) ? '&trial_skip=true' : '';
         $discount_code_parameter = isset($_GET['code']) ? '&code=' . $_GET['code'] : '';
 
+        $user_phone = preg_replace('/\D+/', '', (string) ($this->user->billing->phone ?? ''));
+        $paystack_channels = (currency() == 'KES') 
+            ? ['card', 'mobile_money'] 
+            : ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'];
+
         switch ($_POST['payment_type']) {
 
             case 'one_time':
@@ -1207,8 +1220,9 @@ class Pay extends Controller {
                     'key' => settings()->paystack->public_key,
                     'email' => $this->user->email,
                     'first_name' => $this->user->name,
-                    'amount' => (int) ($formatted_price * 100),
+                    'amount' => (int) round($formatted_price * 100),
                     'currency' => currency(),
+                    'channels' => $paystack_channels,
                     'metadata' => [
                         'user_id' => $this->user->user_id,
                         'plan_id' => $this->plan_id,
@@ -1220,6 +1234,10 @@ class Pay extends Controller {
                     ],
                     'callback_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount))
                 ];
+
+                if(!empty($user_phone)) {
+                    $paystack_one_time_payload['metadata']['phone'] = $user_phone;
+                }
 
                 /* Create one-time payment link */
                 $paystack_response = \Unirest\Request::post(
@@ -1240,12 +1258,12 @@ class Pay extends Controller {
 
                 /* Prepare Paystack plan payload */
                 $paystack_plan_payload = [
-                    'name' => $this->plan->name,
+                    'name' => $this->plan->name . ' - ' . l('plan.custom_plan.' . $_POST['payment_frequency']),
                     'interval' => match ($_POST['payment_frequency']) {
                         'annual' => 'annually',
                         default => $_POST['payment_frequency']
                     },
-                    'amount' => (int) ($formatted_price * 100),
+                    'amount' => (int) round($formatted_price * 100),
                     'currency' => currency()
                 ];
 
@@ -1256,7 +1274,41 @@ class Pay extends Controller {
                     \Unirest\Request\Body::json($paystack_plan_payload)
                 );
 
+                /* If recurring plan fails on Paystack (e.g. mobile money not supported for recurring in KES), fallback to one-time payment */
                 if(!$paystack_plan_response->body->status) {
+                    $paystack_one_time_payload = [
+                        'key' => settings()->paystack->public_key,
+                        'email' => $this->user->email,
+                        'first_name' => $this->user->name,
+                        'amount' => (int) round($formatted_price * 100),
+                        'currency' => currency(),
+                        'channels' => $paystack_channels,
+                        'metadata' => [
+                            'user_id' => $this->user->user_id,
+                            'plan_id' => $this->plan_id,
+                            'payment_frequency' => $_POST['payment_frequency'],
+                            'base_amount' => $base_amount,
+                            'code' => $code,
+                            'discount_amount' => $discount_amount,
+                            'taxes_ids' => json_encode($this->applied_taxes_ids)
+                        ],
+                        'callback_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount))
+                    ];
+
+                    if(!empty($user_phone)) {
+                        $paystack_one_time_payload['metadata']['phone'] = $user_phone;
+                    }
+
+                    $fallback_response = \Unirest\Request::post(
+                        Paystack::$api_url . 'transaction/initialize',
+                        Paystack::get_headers(),
+                        \Unirest\Request\Body::json($paystack_one_time_payload)
+                    );
+
+                    if($fallback_response->body && $fallback_response->body->status) {
+                        header('Location: ' . $fallback_response->body->data->authorization_url); die();
+                    }
+
                     $paystack_error_message = (DEBUG || \Altum\Authentication::is_admin()) ? $paystack_plan_response->body->message : l('pay.error_message.failed_payment');
                     Alerts::add_error($paystack_error_message);
                     redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
@@ -1270,8 +1322,9 @@ class Pay extends Controller {
                     'email' => $this->user->email,
                     'first_name' => $this->user->name,
                     'currency' => currency(),
-                    'amount' => (int) ($formatted_price * 100),
+                    'amount' => (int) round($formatted_price * 100),
                     'plan' => $paystack_plan_code,
+                    'channels' => $paystack_channels,
                     'metadata' => [
                         'user_id' => $this->user->user_id,
                         'plan_id' => $this->plan_id,
@@ -1284,6 +1337,10 @@ class Pay extends Controller {
                     'callback_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount))
                 ];
 
+                if(!empty($user_phone)) {
+                    $paystack_recurring_payload['metadata']['phone'] = $user_phone;
+                }
+
                 /* Create recurring payment link */
                 $paystack_recurring_response = \Unirest\Request::post(
                     Paystack::$api_url . 'transaction/initialize',
@@ -1292,6 +1349,18 @@ class Pay extends Controller {
                 );
 
                 if(!$paystack_recurring_response->body->status) {
+                    /* Fallback to one-time initialization so payment succeeds with card or M-Pesa */
+                    unset($paystack_recurring_payload['plan']);
+                    $retry_response = \Unirest\Request::post(
+                        Paystack::$api_url . 'transaction/initialize',
+                        Paystack::get_headers(),
+                        \Unirest\Request\Body::json($paystack_recurring_payload)
+                    );
+
+                    if($retry_response->body && $retry_response->body->status) {
+                        header('Location: ' . $retry_response->body->data->authorization_url); die();
+                    }
+
                     $paystack_error_message = (DEBUG || \Altum\Authentication::is_admin()) ? $paystack_recurring_response->body->message : l('pay.error_message.failed_payment');
                     Alerts::add_error($paystack_error_message);
                     redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);

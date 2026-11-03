@@ -31,11 +31,10 @@
                                     name="phone_number"
                                     class="form-control"
                                     value=""
-                                    maxlength="10"
-                                    inputmode="numeric"
+                                    maxlength="20"
+                                    inputmode="tel"
                                     autocomplete="tel"
                                     required="required"
-                                    pattern="^(07|01)[0-9]{8}$"
                                     placeholder="<?= l('welcome_phone_capture.placeholder') ?>"
                                     data-phone-input
                                     autofocus="autofocus"
@@ -72,7 +71,19 @@
                 const loading_html = <?= json_encode('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>' . l('global.loading')) ?>;
                 const original_button_html = submit_button ? submit_button.innerHTML : '';
 
-                const normalize_phone = value => value.replace(/\D+/g, '').slice(0, 10);
+                const clean_phone = value => {
+                    if(!value) return '';
+                    let digits = value.replace(/\D+/g, '');
+                    if(digits.startsWith('254') && digits.length >= 12) {
+                        digits = '0' + digits.slice(3, 12);
+                    } else if((digits.startsWith('7') || digits.startsWith('1')) && digits.length === 9) {
+                        digits = '0' + digits;
+                    } else if(digits.startsWith('0') && digits.length > 10) {
+                        digits = digits.slice(0, 10);
+                    }
+                    return digits;
+                };
+
                 const phone_regex = /^(07|01)\d{8}$/;
 
                 const set_feedback = message => {
@@ -90,15 +101,13 @@
                     }
                 };
 
-                const validate_phone = () => phone_regex.test(phone_input.value);
+                const validate_phone = () => phone_regex.test(clean_phone(phone_input.value));
 
                 const refresh_state = () => {
-                    phone_input.value = normalize_phone(phone_input.value);
-
                     const is_valid = validate_phone();
                     update_button_state(is_valid);
 
-                    if(phone_input.value.length) {
+                    if(phone_input.value.trim().length > 3) {
                         phone_input.classList.toggle('is-invalid', !is_valid);
                     } else {
                         phone_input.classList.remove('is-invalid');
@@ -116,13 +125,23 @@
                     refresh_state();
                 });
 
+                phone_input.addEventListener('blur', () => {
+                    let cleaned = clean_phone(phone_input.value);
+                    if(phone_regex.test(cleaned)) {
+                        phone_input.value = cleaned;
+                    }
+                });
+
                 form.addEventListener('submit', async event => {
                     event.preventDefault();
 
                     set_feedback('');
-                    phone_input.value = normalize_phone(phone_input.value);
+                    let cleaned = clean_phone(phone_input.value);
+                    if(phone_regex.test(cleaned)) {
+                        phone_input.value = cleaned;
+                    }
 
-                    if(!refresh_state()) {
+                    if(!validate_phone()) {
                         phone_input.classList.add('is-invalid');
                         set_feedback(invalid_message);
                         return;
@@ -178,8 +197,15 @@
                 });
 
                 if(window.jQuery && typeof jQuery.fn.modal === 'function') {
+                    jQuery(modal_selector).on('shown.bs.modal', () => {
+                        phone_input.focus();
+                    });
                     jQuery(modal_selector).modal('show');
                 }
+
+                setTimeout(() => {
+                    phone_input.focus();
+                }, 300);
 
                 refresh_state();
             })();

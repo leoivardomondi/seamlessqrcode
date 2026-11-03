@@ -59,7 +59,17 @@ class PhoneCapture extends Controller {
             ];
         }
 
-        $phone_number = preg_replace('/\D+/', '', input_clean($_POST['phone_number'] ?? '', 32));
+        $raw_phone = input_clean($_POST['phone_number'] ?? '', 32);
+        $phone_number = preg_replace('/\D+/', '', $raw_phone);
+
+        /* Normalize Kenyan phone formats (+254... / 254... / 7... / 1...) */
+        if(str_starts_with($phone_number, '254') && strlen($phone_number) >= 12) {
+            $phone_number = '0' . substr($phone_number, 3, 9);
+        } elseif((str_starts_with($phone_number, '7') || str_starts_with($phone_number, '1')) && strlen($phone_number) == 9) {
+            $phone_number = '0' . $phone_number;
+        } elseif(strlen($phone_number) > 10) {
+            $phone_number = substr($phone_number, 0, 10);
+        }
 
         if(!preg_match('/^(07|01)\d{8}$/', $phone_number)) {
             Response::json(l('welcome_phone_capture.error'), 'error');

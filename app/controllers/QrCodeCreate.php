@@ -381,9 +381,10 @@ class QrCodeCreate extends Controller {
                         $_POST['link_id'] = null;
                     }
                 } else {
-                    $dynamic_url_slug = $_POST['dynamic_url_slug'] ?: generate_available_link_url();
+                    $dynamic_domain_id = get_default_dynamic_domain_id();
+                    $dynamic_url_slug = $_POST['dynamic_url_slug'] ?: generate_available_link_url($dynamic_domain_id);
 
-                    if(db()->where('url', $dynamic_url_slug)->where('domain_id', 0)->getValue('links', 'link_id')) {
+                    if(db()->where('url', $dynamic_url_slug)->where('domain_id', $dynamic_domain_id)->getValue('links', 'link_id')) {
                         Alerts::add_field_error('url', l('link.error_message.url_exists'));
                     }
 
@@ -393,7 +394,7 @@ class QrCodeCreate extends Controller {
                     }
 
                     $_POST['dynamic_url_slug'] = $dynamic_url_slug;
-                    $settings['url'] = get_full_url_from_link_url($dynamic_url_slug);
+                    $settings['url'] = get_full_url_from_link_url($dynamic_url_slug, $dynamic_domain_id);
                 }
             }
 
@@ -483,7 +484,7 @@ class QrCodeCreate extends Controller {
                             cache()->deleteItem('link?link_id=' . (int) $_POST['link_id']);
                             cache()->deleteItemsByTag('link_id=' . (int) $_POST['link_id']);
                         } else {
-                            $_POST['link_id'] = create_qr_code_dynamic_link($this->user, $destination_url, $_POST['name'], $_POST['project_id'], $_POST['dynamic_url_slug']);
+                            $_POST['link_id'] = create_qr_code_dynamic_link($this->user, $destination_url, $_POST['name'], $_POST['project_id'], $_POST['dynamic_url_slug'], get_default_dynamic_domain_id());
                             cache()->deleteItem('link_links_total?user_id=' . $this->user->user_id);
                             cache()->deleteItem('links_total?user_id=' . $this->user->user_id);
                             cache()->deleteItem('links?user_id=' . $this->user->user_id);

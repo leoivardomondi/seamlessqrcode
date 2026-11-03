@@ -407,7 +407,7 @@ class LinkCreate extends Controller {
             'location_url' => $_POST['location_url'] ?? '',
             'location_urls' => $_POST['location_urls'] ?? '',
             'url' => $_POST['url'] ?? '',
-            'domain_id' => $_POST['domain_id'] ?? '',
+            'domain_id' => $_POST['domain_id'] ?? (get_default_dynamic_domain_id() ?: ''),
             'project_id' => $_POST['project_id'] ?? '',
             'splash_page_id' => $_POST['splash_page_id'] ?? '',
             'pixels_ids' => json_decode($_POST['pixels_ids'] ?? '[]'),

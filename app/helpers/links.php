@@ -167,8 +167,54 @@ function get_full_url_from_link_url($url, $domain_id = 0) {
     return SITE_URL . $url;
 }
 
-function create_qr_code_dynamic_link($user, $location_url, $name = '', $project_id = null, $url = null) {
-    $url = $url ?: generate_available_link_url();
+function get_default_dynamic_domain() {
+    static $domain = null;
+    if($domain !== null) {
+        return $domain;
+    }
+
+    try {
+        $domain = db()->where('host', 'smqr.link')->getOne('domains');
+        if(!$domain) {
+            $domain = db()->where('host', '%smqr.link%', 'LIKE')->getOne('domains');
+        }
+
+        if(!$domain) {
+            $domain_id = db()->insert('domains', [
+                'user_id' => 0,
+                'scheme' => 'https://',
+                'host' => 'smqr.link',
+                'type' => 1,
+                'is_enabled' => 1,
+                'datetime' => get_date(),
+            ]);
+            if($domain_id) {
+                $domain = db()->where('domain_id', $domain_id)->getOne('domains');
+            }
+        }
+    } catch (\Exception $e) {
+        // ignore
+    }
+
+    return $domain;
+}
+
+function get_default_dynamic_domain_id() {
+    $domain = get_default_dynamic_domain();
+    return $domain ? (int) $domain->domain_id : 0;
+}
+
+function get_default_dynamic_domain_url() {
+    $domain = get_default_dynamic_domain();
+    if($domain) {
+        return $domain->scheme . $domain->host . '/';
+    }
+    return 'https://smqr.link/';
+}
+
+function create_qr_code_dynamic_link($user, $location_url, $name = '', $project_id = null, $url = null, $domain_id = null) {
+    $domain_id = $domain_id !== null ? (int) $domain_id : get_default_dynamic_domain_id();
+    $url = $url ?: generate_available_link_url($domain_id);
 
     $settings = json_encode([
         'app_linking_is_enabled' => false,
@@ -200,7 +246,7 @@ function create_qr_code_dynamic_link($user, $location_url, $name = '', $project_
 
     return db()->insert('links', [
         'user_id' => $user->user_id,
-        'domain_id' => 0,
+        'domain_id' => $domain_id,
         'project_id' => $project_id,
         'email_reports' => json_encode([]),
         'splash_page_id' => null,

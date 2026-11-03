@@ -93,9 +93,14 @@ if(!empty($data->payment->period_start) && !empty($data->payment->period_end)) {
 
 <div class="container my-5 d-flex justify-content-center">
     <div class="col-lg-10">
-        <div class="d-print-none d-flex justify-content-between mb-5">
-            <div></div>
-            <div class="d-flex align-items-center">
+        <div class="d-print-none d-flex flex-wrap justify-content-between align-items-center mb-4">
+            <div>
+                <?php if(empty($data->payment->billing->name)): ?>
+                    <span class="text-muted small"><i class="fas fa-fw fa-info-circle mr-1"></i> Billing details missing? <a href="<?= url('account') ?>" target="_blank" class="font-weight-bold">Update billing details in account</a> then refresh to include them.</span>
+                <?php endif ?>
+            </div>
+            <div class="d-flex align-items-center mt-2 mt-md-0">
+                <a href="<?= url('account') ?>" target="_blank" class="btn btn-outline-info mr-2"><i class="fas fa-fw fa-sm fa-id-card mr-1"></i> <?= l('account_billing.header') ?? 'Billing Details' ?></a>
                 <a href="<?= $download_invoice_url ?>" class="btn btn-primary mr-2"><i class="fas fa-fw fa-sm fa-download mr-1"></i> <?= l('invoice.download_pdf') ?></a>
                 <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="fas fa-fw fa-sm fa-print mr-1"></i> <?= l('invoice.print') ?></button>
             </div>

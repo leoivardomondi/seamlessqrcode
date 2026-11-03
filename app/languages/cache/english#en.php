@@ -530,7 +530,7 @@ return [
 	'plan.why.three.subheader' => 'We focus on delivering the best experience to you, as we fully understand how valuable time is.',
 	'plan.faq.header' => 'Frequently asked questions',
 	'plan.faq.one.question' => 'What forms of payment do you accept?',
-	'plan.faq.one.answer' => 'We accept payments via credit cards, PayPal & crypto as well.',
+	'plan.faq.one.answer' => 'We accept payments via credit cards and mobile money like airtel money and mpesa,',
 	'plan.faq.two.question' => 'Can I cancel my subscription?',
 	'plan.faq.two.answer' => 'Yes, you definitely can cancel your subscription and, you will still have access to all the features that you already paid for until the end of paid date range.',
 	'plan.faq.three.question' => 'Will I get an invoice?',

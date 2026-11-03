@@ -1766,13 +1766,15 @@ i.xl {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: .8rem;
+	gap: 1rem;
+	flex-wrap: nowrap;
 }
 
 .plan-billing-label {
 	color: var(--plan-text);
 	font-size: .95rem;
 	font-weight: 500;
+	white-space: nowrap;
 }
 
 .plan-billing-label span {
@@ -1780,25 +1782,46 @@ i.xl {
 }
 
 .plan-billing-toggle {
-	padding-left: 2.65rem;
+	display: inline-flex;
+	align-items: center;
+	position: relative;
+	width: 2.6rem;
+	height: 1.4rem;
+	padding: 0;
+	margin: 0;
+	flex-shrink: 0;
+}
+
+.plan-billing-toggle .custom-control-label {
+	position: relative;
+	display: block;
+	width: 2.6rem;
+	height: 1.4rem;
+	margin: 0;
+	padding: 0;
+	cursor: pointer;
 }
 
 .plan-billing-toggle .custom-control-label::before {
+	position: absolute;
+	top: 0;
 	left: 0;
-	width: 2.35rem;
-	height: 1.35rem;
+	width: 2.6rem;
+	height: 1.4rem;
 	border: 0;
 	border-radius: 999px;
 	background: #d8d8d8;
 }
 
 .plan-billing-toggle .custom-control-label::after {
-	top: calc(.25rem + 2px);
-	left: .25rem;
-	width: .9rem;
-	height: .9rem;
+	position: absolute;
+	top: 0.2rem;
+	left: 0.25rem;
+	width: 1rem;
+	height: 1rem;
 	border-radius: 50%;
 	background: #fff;
+	transition: transform .15s ease-in-out;
 }
 
 .plan-billing-toggle .custom-control-input:checked ~ .custom-control-label::before {
@@ -1806,7 +1829,7 @@ i.xl {
 }
 
 .plan-billing-toggle .custom-control-input:checked ~ .custom-control-label::after {
-	transform: translateX(1rem);
+	transform: translateX(1.15rem);
 }
 
 .plan-pricing-page .pricing-plan {
@@ -1922,12 +1945,13 @@ i.xl {
 
 @media (max-width: 575px) {
 	.plan-billing-switcher {
-		flex-wrap: wrap;
-		gap: .55rem;
+		flex-wrap: nowrap;
+		gap: .65rem;
 	}
 
 	.plan-billing-label {
 		font-size: .85rem;
+		white-space: nowrap;
 	}
 
 	.plan-pricing-page .pricing-name {

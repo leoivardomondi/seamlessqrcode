@@ -1,4 +1,6 @@
-<?php defined('ALTUMCODE') || die(); ?>
+<?php defined('ALTUMCODE') || die(); ?>
+
+<?php if(isset($_GET['preview_template']) || isset($_GET['preview']) || \Altum\Router::$controller == 'BiolinksTemplates' || \Altum\Router::$controller == 'BiolinkTemplate') return; ?>
 
 <?php if(settings()->cookie_consent->is_enabled): ?>
 

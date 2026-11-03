@@ -59,7 +59,7 @@
                                 </label>
                                 <select name="type" id="type" class="custom-select custom-select-sm">
                                     <option value=""><?= l('global.all') ?></option>
-                                    <?php foreach(['email_collector', 'phone_collector', 'contact_collector'] as $value): ?>
+                                    <?php foreach(['email_collector', 'phone_collector', 'contact_collector', 'splash_page'] as $value): ?>
                                         <option value="<?= $value ?>" <?= isset($data->filters->filters['type']) && $data->filters->filters['type'] == $value ? 'selected="selected"' : null ?>><?= l('link.biolink.blocks.' . $value) ?></option>
                                     <?php endforeach ?>
                                 </select>
@@ -163,15 +163,25 @@
                             </td>
 
                             <td class="text-nowrap">
-                                <a href="<?= url('link/' . $row->link_id . '?tab=blocks&biolink_block_id=' . $row->biolink_block_id . '#biolink_block_expanded_content_' . $row->biolink_block_id) ?>" class="font-weight-bold">
-                                    <span data-toggle="tooltip" title="<?= $row->settings->name ?? l('global.unknown') ?>"><?= string_truncate($row->settings->name ?? l('global.unknown'), 30) ?></span>
-                                </a>
+                                <?php if($row->type == 'splash_page'): ?>
+                                    <?php if(!empty($row->data->splash_page_id)): ?>
+                                        <a href="<?= url('splash-page-update/' . $row->data->splash_page_id) ?>" class="font-weight-bold">
+                                            <span data-toggle="tooltip" title="<?= $row->biolink_block_name ?>"><?= string_truncate($row->biolink_block_name, 30) ?></span>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="font-weight-bold"><?= $row->biolink_block_name ?></span>
+                                    <?php endif ?>
+                                <?php else: ?>
+                                    <a href="<?= url('link/' . $row->link_id . '?tab=blocks&biolink_block_id=' . $row->biolink_block_id . '#biolink_block_expanded_content_' . $row->biolink_block_id) ?>" class="font-weight-bold">
+                                        <span data-toggle="tooltip" title="<?= $row->settings->name ?? l('global.unknown') ?>"><?= string_truncate($row->settings->name ?? l('global.unknown'), 30) ?></span>
+                                    </a>
+                                <?php endif ?>
                             </td>
 
                             <td class="text-nowrap">
                                 <span class="badge badge-light">
-                                    <i class="<?= $data->biolink_blocks[$row->type]['icon'] ?> fa-fw fa-sm mr-1"></i>
-                                    <?= l('link.biolink.blocks.' . $row->type) ?>
+                                    <i class="<?= $row->type == 'splash_page' ? 'fas fa-droplet' : ($data->biolink_blocks[$row->type]['icon'] ?? 'fas fa-database') ?> fa-fw fa-sm mr-1"></i>
+                                    <?= $row->type == 'splash_page' ? l('splash_pages.splash_page_id') : (isset($data->biolink_blocks[$row->type]) ? l('link.biolink.blocks.' . $row->type) : $row->type) ?>
                                 </span>
                             </td>
 

@@ -108,7 +108,8 @@
                 </div>
 
                 <div class="mt-4">
-                    <button type="submit" name="submit" class="btn btn-lg btn-block btn-primary"><?= sprintf(l('pay_billing.submit'), $data->plan->translations->{\Altum\Language::$name}->name ?? $data->plan->name) ?></button>
+                    <button type="submit" name="submit" class="btn btn-lg btn-block btn-primary"><?= sprintf(l('pay_billing.submit'), $data->plan->translations->{\Altum\Language::$name}->name ?? $data->plan->name) ?></button>
+                    <a href="<?= url('pay/' . $data->plan_id . '?' . (isset($_GET['trial_skip']) ? '&trial_skip=true' : null) . (isset($_GET['code']) ? '&code=' . $_GET['code'] : null)) ?>" class="btn btn-block btn-outline-secondary mt-2">Skip & pay directly</a>
                 </div>
             </form>
         </div>

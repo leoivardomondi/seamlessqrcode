@@ -26,7 +26,7 @@ class SplashPages extends Model {
         /* Get the user splash_pages */
         $splash_pages = [];
 
-        /* Try to check if the user posts exists via the cache */
+        /* Try to check if the user splash_pages exists in the cache */
         $cache_instance = cache()->getItem('splash_pages?user_id=' . $user_id);
 
         /* Set cache if not existing */
@@ -51,7 +51,6 @@ class SplashPages extends Model {
         }
 
         return $splash_pages;
-
     }
 
     public function delete($splash_page_id) {
@@ -62,8 +61,11 @@ class SplashPages extends Model {
 
         $splash_page->settings = json_decode($splash_page->settings ?? '');
 
-        /* Delete file */
-        \Altum\Uploads::delete_uploaded_file($splash_page->settings->logo, 'splash_pages');
+        /* Delete files */
+        \Altum\Uploads::delete_uploaded_file($splash_page->settings->logo ?? null, 'splash_pages');
+        \Altum\Uploads::delete_uploaded_file($splash_page->settings->favicon ?? null, 'splash_pages');
+        \Altum\Uploads::delete_uploaded_file($splash_page->settings->opengraph ?? null, 'splash_pages');
+        \Altum\Uploads::delete_uploaded_file($splash_page->settings->background ?? null, 'splash_pages');
 
         /* Delete from database */
         db()->where('splash_page_id', $splash_page_id)->delete('splash_pages');

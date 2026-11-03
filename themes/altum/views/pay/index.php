@@ -44,9 +44,7 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
             <ol class="custom-breadcrumbs small">
                 <li><a href="<?= url() ?>"><?= l('index.breadcrumb') ?></a> <i class="fas fa-fw fa-angle-right"></i></li>
                 <li><a href="<?= url('plan') ?>"><?= l('plan.breadcrumb') ?></a> <i class="fas fa-fw fa-angle-right"></i></li>
-                <?php if(settings()->payment->taxes_and_billing_is_enabled): ?>
-                    <li><a href="<?= url('pay-billing/' . $data->plan_id) ?>"><?= l('pay_billing.breadcrumb') ?></a> <i class="fas fa-fw fa-angle-right"></i></li>
-                <?php endif ?>
+
                 <li class="active" aria-current="page"><?= sprintf(l('pay.breadcrumb'), $data->plan->translations->{\Altum\Language::$name}->name ?? $data->plan->name) ?></li>
             </ol>
         </nav>

@@ -2073,4 +2073,159 @@ class Link extends Controller {
         Response::json('', 'success', ['checkout_url' => $checkout_url]);
     }
 
+
+
+    public function splash_page_collector() {
+        if(empty($_POST)) {
+            die();
+        }
+
+        $_POST['link_id'] = (int) ($_POST['link_id'] ?? 0);
+        $_POST['splash_page_id'] = (int) ($_POST['splash_page_id'] ?? 0);
+        $_POST['name'] = input_clean($_POST['name'] ?? '', 128);
+        $_POST['phone'] = input_clean($_POST['phone'] ?? '', 64);
+        $_POST['email'] = input_clean_email($_POST['email'] ?? '');
+        $_POST['consent'] = !empty($_POST['consent']) ? 1 : 0;
+
+        /* Get the link data */
+        $link = db()->where('link_id', $_POST['link_id'])->getOne('links');
+
+        if(!$link) {
+            die();
+        }
+
+        /* Get the splash page data */
+        $splash_page = db()->where('splash_page_id', $_POST['splash_page_id'])->getOne('splash_pages');
+
+        if(!$splash_page) {
+            die();
+        }
+
+        $splash_page->settings = json_decode($splash_page->settings ?? '');
+
+        /* Validation checks based on splash page settings */
+        if(!empty($splash_page->settings->form_name_required) && empty($_POST['name'])) {
+            \Altum\Response::json(l('global.error_message.empty_fields'), 'error');
+        }
+
+        if(!empty($splash_page->settings->form_phone_required) && empty($_POST['phone'])) {
+            \Altum\Response::json(l('global.error_message.empty_fields'), 'error');
+        }
+
+        if(!empty($splash_page->settings->form_email_required) && empty($_POST['email'])) {
+            \Altum\Response::json(l('global.error_message.empty_fields'), 'error');
+        }
+
+        if(!empty($splash_page->settings->form_consent_required) && empty($_POST['consent'])) {
+            \Altum\Response::json(l('global.error_message.empty_fields'), 'error');
+        }
+
+        /* Get user */
+        $user = db()->where('user_id', $link->user_id)->getOne('users');
+
+        $data = [
+            'name' => $_POST['name'],
+            'phone' => $_POST['phone'],
+            'email' => $_POST['email'],
+            'consent' => $_POST['consent'] ? 'yes' : 'no',
+            'splash_page_id' => $splash_page->splash_page_id,
+            'splash_page_name' => $splash_page->name,
+        ];
+
+        /* Store the data */
+        $datum_id = db()->insert('data', [
+            'biolink_block_id' => 0,
+            'link_id' => $link->link_id,
+            'project_id' => $link->project_id,
+            'user_id' => $link->user_id,
+            'type' => 'splash_page',
+            'data' => json_encode($data),
+            'datetime' => get_date(),
+        ]);
+
+        /* Send notifications if email notifier is set */
+        try {
+            $notification_handlers = (new \Altum\Models\NotificationHandlers())->get_notification_handlers_by_user_id($user->user_id);
+
+            /* Collect allowed handlers */
+            $allowed_handler_ids = [];
+            if(!empty($splash_page->settings->notifications)) {
+                $allowed_handler_ids = array_map('intval', (array) $splash_page->settings->notifications);
+            } else {
+                /* If not specified on splash page, notify all active email handlers for this user */
+                foreach($notification_handlers as $handler) {
+                    if($handler->is_enabled && $handler->type == 'email') {
+                        $allowed_handler_ids[] = (int) $handler->notification_handler_id;
+                    }
+                }
+            }
+
+            if(!empty($allowed_handler_ids)) {
+                $notification_data = [
+                    'link_id'        => $link->link_id,
+                    'splash_page_id' => $splash_page->splash_page_id,
+                    'name'           => $_POST['name'] ?: 'N/A',
+                    'phone'          => $_POST['phone'] ?: 'N/A',
+                    'email'          => $_POST['email'] ?: 'N/A',
+                    'url'            => url('data?datum_id=' . $datum_id),
+                ];
+
+                $dynamic_message_data = \Altum\NotificationHandlers::build_dynamic_message_data($notification_data);
+
+                $notification_message = sprintf(
+                    l('biolink_block.simple_notification', $user->language),
+                    $splash_page->name,
+                    $link->url ?? '',
+                    $dynamic_message_data,
+                    $notification_data['url']
+                );
+
+                $email_template = get_email_template(
+                    [
+                        '{{BLOCK_TITLE}}' => $splash_page->name
+                    ],
+                    l('global.emails.user_data_collected.subject', $user->language),
+                    [
+                        '{{NAME}}'        => $user->name,
+                        '{{DATA_PHONE}}'  => $_POST['phone'] ?: 'N/A',
+                        '{{DATA_NAME}}'   => $_POST['name'] ?: 'N/A',
+                        '{{DATA_EMAIL}}'  => $_POST['email'] ?: 'N/A',
+                        '{{DATA_MESSAGE}}'=> 'Consent: ' . ($data['consent'] ?? 'no'),
+                        '{{DATA_LINK}}'   => $notification_data['url'],
+                    ],
+                    l('global.emails.user_data_collected_contact_collector.body', $user->language)
+                );
+
+                $context = [
+                    'user' => $user,
+                    'email_template' => $email_template,
+                    'message' => $notification_message,
+                    'push_title' => $splash_page->name,
+                    'push_description' => $notification_message,
+                    'internal_icon' => 'fas fa-database',
+                    'discord_color' => '2664261',
+                    'slack_emoji' => ':large_green_circle:'
+                ];
+
+                \Altum\NotificationHandlers::process(
+                    $notification_handlers,
+                    $allowed_handler_ids,
+                    $notification_data,
+                    $context
+                );
+            }
+        } catch (\Exception $e) {
+            // fail-safe
+        }
+
+        /* Set unlock cookie */
+        setcookie('link_unlocked_' . $link->link_id, md5($link->link_id . $link->link_id), time() + 60 * 60 * 24 * 1, COOKIE_PATH);
+
+        $success_message = !empty($splash_page->settings->form_success_message) ? $splash_page->settings->form_success_message : l('splash_pages.form_success_message_default');
+
+        \Altum\Response::json($success_message, 'success', [
+            'destination_url' => $link->full_url ?? url(),
+        ]);
+    }
+
 }
