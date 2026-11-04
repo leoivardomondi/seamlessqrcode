@@ -38,9 +38,7 @@
 
         <?= \Altum\Event::get_content('head') ?>
 
-        <?php if(is_logged_in() && !user()->plan_settings->export->pdf): ?>
-            <style>@media print { body { display: none; } }</style>
-        <?php endif ?>
+
 
         <?php if(!empty(settings()->custom->head_js_splash_page)): ?>
             <?= get_settings_custom_head_js('head_js_splash_page') ?>
