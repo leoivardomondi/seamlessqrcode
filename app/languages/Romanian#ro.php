@@ -1357,6 +1357,8 @@ return [
 	'splash_pages.link_unlock_seconds_help' => 'Cât durează până se deblochează linkul final?',
 	'splash_pages.auto_redirect' => 'Redirecționare automată',
 	'splash_pages.auto_redirect_help' => 'Redirecționare automată către linkul final după ce se termină cronometrul.',
+	'splash_pages.always_show' => 'Afișează întotdeauna la fiecare vizită',
+	'splash_pages.always_show_help' => 'Când este activată, pagina de pornire va fi afișată la fiecare vizită/scanare, ocolind cookie-ul de deblocare.',
 	'splash_pages.ads_header' => 'Antet reclame',
 	'splash_pages.ads_footer' => 'Subsol anunțuri',
 	'splash_pages.no_data' => 'Nicio pagină de pornire existentă',

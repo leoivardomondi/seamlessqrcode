@@ -1357,6 +1357,8 @@ return [
 	'splash_pages.link_unlock_seconds_help' => 'Combien de temps faut-il pour que le lien final se déverrouille ?',
 	'splash_pages.auto_redirect' => 'Redirection automatique',
 	'splash_pages.auto_redirect_help' => 'Redirection automatique vers le lien final après la fin du compte à rebours.',
+	'splash_pages.always_show' => 'Toujours afficher à chaque visite',
+	'splash_pages.always_show_help' => 'Lorsqu\'il est activé, la page d\'accueil s\'affichera à chaque visite ou scan, en ignorant le cookie de déverrouillage.',
 	'splash_pages.ads_header' => 'En-tête des annonces',
 	'splash_pages.ads_footer' => 'Pied de page des annonces',
 	'splash_pages.no_data' => 'Aucune page d\'accueil existante',

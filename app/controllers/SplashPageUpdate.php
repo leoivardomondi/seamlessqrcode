@@ -44,8 +44,10 @@ class SplashPageUpdate extends Controller {
 
         $splash_page->settings = json_decode($splash_page->settings ?? '');
 
-        $notification_handlers = (new \Altum\Models\NotificationHandlers())->get_notification_handlers_by_user_id($this->user->user_id);
-
+        $notification_handlers = (new \Altum\Models\NotificationHandlers())->get_notification_handlers_by_user_id($this->user->user_id);
+
+
+
         if(!empty($_POST)) {
             $_POST['name'] = input_clean($_POST['name'], 64);
             $_POST['title'] = input_clean($_POST['title'], 256);
@@ -58,6 +60,7 @@ class SplashPageUpdate extends Controller {
             $_POST['ads_footer'] = mb_substr(trim($_POST['ads_footer']), 0, 10000);
             $_POST['link_unlock_seconds'] = (int) $_POST['link_unlock_seconds'];
             $_POST['auto_redirect'] = (int) isset($_POST['auto_redirect']);
+            $_POST['always_show'] = (int) isset($_POST['always_show']);
 
             /* Appearance & Colors */
             $_POST['background_type'] = in_array($_POST['background_type'] ?? '', ['default', 'color', 'gradient', 'image']) ? $_POST['background_type'] : 'default';
@@ -143,6 +146,7 @@ class SplashPageUpdate extends Controller {
                     'custom_js' => $_POST['custom_js'],
                     'ads_header' => $_POST['ads_header'],
                     'ads_footer' => $_POST['ads_footer'],
+                    'always_show' => $_POST['always_show'],
 
                     /* Appearance & Colors */
                     'background_type' => $_POST['background_type'],
@@ -188,7 +192,8 @@ class SplashPageUpdate extends Controller {
                     'form_submit_button_background_color' => $_POST['form_submit_button_background_color'],
                     'form_submit_button_text_color' => $_POST['form_submit_button_text_color'],
                     'form_skip_button_text' => $_POST['form_skip_button_text'],
-                    'form_success_message' => $_POST['form_success_message'],
+                    'form_success_message' => $_POST['form_success_message'],
+
                     'notifications' => array_map('intval', $_POST['notifications'] ?? []),
                 ]);
 

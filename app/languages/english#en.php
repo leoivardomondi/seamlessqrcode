@@ -1371,6 +1371,8 @@ return [
 	'splash_pages.link_unlock_seconds_help' => 'How much it takes for the final link to unlock.',
 	'splash_pages.auto_redirect' => 'Auto redirect',
 	'splash_pages.auto_redirect_help' => 'Auto redirect to final link after the countdown timer ends.',
+	'splash_pages.always_show' => 'Always display on every visit',
+	'splash_pages.always_show_help' => 'When enabled, the splash page will display on every visit/scan, bypassing the unlock cookie.',
 	'splash_pages.ads_header' => 'Ads header',
 	'splash_pages.ads_footer' => 'Ads footer',
 	'splash_pages.no_data' => 'No existing splash pages',

@@ -120,6 +120,15 @@ class Link extends Controller {
         Meta::set_canonical_url($this->link->full_url);
 
         /* Check for splash page */
+        $splash_page = null;
+        if($this->link->splash_page_id && $this->user->plan_settings->splash_pages_limit) {
+            $splash_pages = (new \Altum\Models\SplashPages())->get_splash_pages_by_user_id($this->user->user_id);
+            $splash_page = $splash_pages[$this->link->splash_page_id] ?? null;
+        }
+
+        $always_show = !empty($splash_page->settings->always_show);
+        $is_cookie_unlocked = ($_COOKIE['link_unlocked_' . $this->link->link_id] ?? null) === md5($this->link->link_id . $this->link->link_id);
+
         if(
             settings()->links->splash_page_is_enabled
             && !$this->is_preview
@@ -127,15 +136,8 @@ class Link extends Controller {
                 ($this->user->plan_settings->{'force_splash_page_on_' . $this->link->type} && !$this->user->plan_settings->splash_pages_limit)
                 || ($this->link->splash_page_id && $this->user->plan_settings->splash_pages_limit)
             )
-            && ($_COOKIE['link_unlocked_' . $this->link->link_id] ?? null) !== md5($this->link->link_id . $this->link->link_id)
+            && (!$is_cookie_unlocked || $always_show)
         ) {
-            /* Get splash page details if needed */
-            $splash_page = null;
-
-            if($this->link->splash_page_id && $this->user->plan_settings->splash_pages_limit) {
-                $splash_pages = (new \Altum\Models\SplashPages())->get_splash_pages_by_user_id($this->user->user_id);
-                $splash_page = $splash_pages[$this->link->splash_page_id] ?? null;
-            }
 
             /* Display splash page on each load? or configurable amount of times */
             $data = [

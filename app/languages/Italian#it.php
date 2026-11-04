@@ -1357,6 +1357,8 @@ return [
 	'splash_pages.link_unlock_seconds_help' => 'Quanto tempo ci vuole per sbloccare il link finale?',
 	'splash_pages.auto_redirect' => 'Reindirizzamento automatico',
 	'splash_pages.auto_redirect_help' => 'Reindirizzamento automatico al link finale dopo la fine del conto alla rovescia.',
+	'splash_pages.always_show' => 'Mostra sempre ad ogni visita',
+	'splash_pages.always_show_help' => 'Se abilitata, la pagina iniziale verrà visualizzata ad ogni visita o scansione, ignorando il cookie di sblocco.',
 	'splash_pages.ads_header' => 'Intestazione annunci',
 	'splash_pages.ads_footer' => 'Piè di pagina annunci',
 	'splash_pages.no_data' => 'Nessuna pagina iniziale esistente',

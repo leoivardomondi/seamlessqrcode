@@ -65,7 +65,13 @@
                 </div>
 
                 <div class="form-group custom-control custom-switch">
-                    <input id="auto_redirect" name="auto_redirect" type="checkbox" class="custom-control-input" <?= $data->values['auto_redirect'] ? 'checked="checked"' : null?>>
+                    <input id="always_show" name="always_show" type="checkbox" class="custom-control-input" <?= ($data->values['always_show'] ?? false) ? 'checked="checked"' : null?>>
+                    <label class="custom-control-label" for="always_show"><i class="fas fa-fw fa-redo-alt fa-sm text-muted mr-1"></i> <?= l('splash_pages.always_show') ?></label>
+                    <small class="form-text text-muted"><?= l('splash_pages.always_show_help') ?></small>
+                </div>
+
+                <div class="form-group custom-control custom-switch">
+                    <input id="auto_redirect"  name="auto_redirect" type="checkbox" class="custom-control-input" <?= $data->values['auto_redirect'] ? 'checked="checked"' : null?>>
                     <label class="custom-control-label" for="auto_redirect"><i class="fas fa-fw fa-square-up-right fa-sm text-muted mr-1"></i> <?= l('splash_pages.auto_redirect') ?></label>
                     <small class="form-text text-muted"><?= l('splash_pages.auto_redirect_help') ?></small>
                 </div>

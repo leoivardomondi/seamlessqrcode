@@ -1357,6 +1357,8 @@ return [
 	'splash_pages.link_unlock_seconds_help' => 'Quanto tempo leva para o link final ser desbloqueado?',
 	'splash_pages.auto_redirect' => 'Redirecionamento automático',
 	'splash_pages.auto_redirect_help' => 'Redirecionamento automático para o link final após o término do cronômetro.',
+	'splash_pages.always_show' => 'Sempre exibir em cada visita',
+	'splash_pages.always_show_help' => 'Quando ativado, a página de introdução será exibida em cada visita ou leitura, ignorando o cookie de desbloqueio.',
 	'splash_pages.ads_header' => 'Cabeçalho de anúncios',
 	'splash_pages.ads_footer' => 'Rodapé de anúncios',
 	'splash_pages.no_data' => 'Nenhuma página de introdução existente',

@@ -1357,6 +1357,8 @@ return [
 	'splash_pages.link_unlock_seconds_help' => 'Wie lange dauert es, bis der endgültige Link freigeschaltet wird?',
 	'splash_pages.auto_redirect' => 'Automatische Weiterleitung',
 	'splash_pages.auto_redirect_help' => 'Automatische Weiterleitung zum endgültigen Link, nachdem der Countdown-Timer abgelaufen ist.',
+	'splash_pages.always_show' => 'Bei jedem Besuch immer anzeigen',
+	'splash_pages.always_show_help' => 'Wenn aktiviert, wird die Splash-Seite bei jedem Besuch/Scan immer angezeigt und das Entsperr-Cookie umgangen.',
 	'splash_pages.ads_header' => 'Anzeigenüberschrift',
 	'splash_pages.ads_footer' => 'Anzeigen-Fußzeile',
 	'splash_pages.no_data' => 'Keine vorhandenen Splash-Seiten',
