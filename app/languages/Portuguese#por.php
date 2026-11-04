@@ -458,6 +458,8 @@ return [
 	'transfer_modal.subheader1' => 'Transferir <strong>%s</strong> para outra conta de usuário.',
 	'transfer_modal.subheader2' => 'Transfira este recurso para outra conta de usuário.',
 	'transfer_modal.success_message' => 'A propriedade de %1$s foi transferida de %2$s para %3$s',
+	'transfer_modal.error_message.email_not_found' => 'Nenhuma conta de usuário encontrada com este endereço de e-mail.',
+	'transfer_modal.error_message.self_transfer' => 'Você não pode transferir um recurso para sua própria conta.',
 	'statistics_reset_modal.header' => 'Limpar estatísticas',
 	'statistics_reset_modal.subheader' => 'Limpar as estatísticas selecionadas atualmente. Esta ação não pode ser desfeita.',
 	'x_reset_modal.header' => 'Redefinir',

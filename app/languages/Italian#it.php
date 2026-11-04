@@ -458,6 +458,8 @@ return [
 	'transfer_modal.subheader1' => 'Trasferisci <strong>%s</strong> a un altro account utente.',
 	'transfer_modal.subheader2' => 'Trasferisci questa risorsa a un altro account utente.',
 	'transfer_modal.success_message' => 'La proprietà di %1$s è stata trasferita da %2$s a %3$s',
+	'transfer_modal.error_message.email_not_found' => 'Nessun account utente trovato con questo indirizzo email.',
+	'transfer_modal.error_message.self_transfer' => 'Non puoi trasferire una risorsa al tuo account.',
 	'statistics_reset_modal.header' => 'Cancella statistiche',
 	'statistics_reset_modal.subheader' => 'Cancella le statistiche attualmente selezionate. Questa azione non può essere annullata.',
 	'x_reset_modal.header' => 'Reimposta',

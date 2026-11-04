@@ -458,6 +458,8 @@ return [
 	'transfer_modal.subheader1' => 'Übertragen Sie <strong>%s</strong> auf ein anderes Benutzerkonto.',
 	'transfer_modal.subheader2' => 'Übertragen Sie diese Ressource auf ein anderes Benutzerkonto.',
 	'transfer_modal.success_message' => 'Der Besitz von %1$s wurde von %2$s auf %3$s übertragen',
+	'transfer_modal.error_message.email_not_found' => 'Kein Benutzerkonto mit dieser E-Mail-Adresse gefunden.',
+	'transfer_modal.error_message.self_transfer' => 'Sie können eine Ressource nicht auf Ihr eigenes Konto übertragen.',
 	'statistics_reset_modal.header' => 'Statistiken löschen',
 	'statistics_reset_modal.subheader' => 'Löschen Sie die aktuell ausgewählten Statistiken. Diese Aktion kann nicht rückgängig gemacht werden.',
 	'x_reset_modal.header' => 'Zurücksetzen',

@@ -168,4 +168,79 @@ class SplashPages extends Controller {
         redirect('splash-pages');
     }
 
+
+    public function transfer() {
+
+        if(!settings()->links->splash_page_is_enabled) {
+            redirect('not-found');
+        }
+
+        \Altum\Authentication::guard();
+
+        /* Team checks */
+        if(\Altum\Teams::is_delegated() && !\Altum\Teams::has_access('update.splash_pages')) {
+            Alerts::add_info(l('global.info_message.team_no_access'));
+            redirect('splash-pages');
+        }
+
+        if(empty($_POST)) {
+            redirect('splash-pages');
+        }
+
+        $splash_page_id = (int) $_POST['splash_page_id'];
+        $_POST['email'] = input_clean_email($_POST['email'] ?? '');
+
+        //ALTUMCODE:DEMO if(DEMO) if($this->user->user_id == 1) Alerts::add_error('Please create an account on the demo to test out this function.');
+
+        if(!\Altum\Csrf::check()) {
+            Alerts::add_error(l('global.error_message.invalid_csrf_token'));
+        }
+
+        if(!$splash_page = db()->where('splash_page_id', $splash_page_id)->where('user_id', $this->user->user_id)->getOne('splash_pages', ['splash_page_id', 'user_id', 'name'])) {
+            redirect('splash-pages');
+        }
+
+        if(!$current_user = db()->where('user_id', $splash_page->user_id)->getOne('users', ['user_id', 'email'])) {
+            redirect('splash-pages');
+        }
+
+        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email', 'status', 'plan_settings'])) {
+            Alerts::add_error(l('transfer_modal.error_message.email_not_found'));
+        }
+
+        if(!empty($new_user) && $current_user->user_id == $new_user->user_id) {
+            Alerts::add_error(l('transfer_modal.error_message.self_transfer'));
+        }
+
+        if(!Alerts::has_field_errors() && !Alerts::has_errors()) {
+
+            /* Update the database */
+            db()->where('splash_page_id', $splash_page->splash_page_id)->update('splash_pages', [
+                'user_id' => $new_user->user_id,
+                'last_datetime' => get_date(),
+            ]);
+
+            /* Detach from current user links */
+            db()->where('splash_page_id', $splash_page->splash_page_id)->where('user_id', $current_user->user_id)->update('links', [
+                'splash_page_id' => null,
+            ]);
+
+            /* Set a nice success message */
+            Alerts::add_success(sprintf(l('transfer_modal.success_message'), '<strong>' . input_clean($splash_page->name) . '</strong>', '<strong>' . input_clean($current_user->email) . '</strong>', '<strong>' . input_clean($new_user->email) . '</strong>'));
+
+            /* Clear the cache */
+            cache()->deleteItem('splash_pages?user_id=' . $current_user->user_id);
+            cache()->deleteItem('splash_pages?user_id=' . $new_user->user_id);
+            cache()->deleteItemsByTag('user_id=' . $current_user->user_id);
+            cache()->deleteItemsByTag('user_id=' . $new_user->user_id);
+
+            redirect('splash-pages');
+        }
+
+        if(!empty($_POST['original_request'])) {
+            redirect(base64_decode($_POST['original_request']) . (!empty($_POST['original_request_query']) ? '?' . base64_decode($_POST['original_request_query']) : null));
+        }
+
+        redirect('splash-pages');
+    }
 }

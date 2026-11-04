@@ -463,6 +463,8 @@ return [
 	'transfer_modal.subheader1' => 'Transfer <strong>%s</strong> to another user account.',
 	'transfer_modal.subheader2' => 'Transfer this resource to another user account.',
 	'transfer_modal.success_message' => 'The ownership of %1$s has been transferred from %2$s to %3$s',
+	'transfer_modal.error_message.email_not_found' => 'No user account found with that email address.',
+	'transfer_modal.error_message.self_transfer' => 'You cannot transfer a resource to your own account.',
 	'statistics_reset_modal.header' => 'Clear statistics',
 	'statistics_reset_modal.subheader' => 'Clear the current selected statistics. This action cannot be undone.',
 	'x_reset_modal.header' => 'Reset',

@@ -458,6 +458,8 @@ return [
 	'transfer_modal.subheader1' => 'Transferă <strong>%s</strong> către un alt cont de utilizator.',
 	'transfer_modal.subheader2' => 'Transferă această resursă către un alt cont de utilizator.',
 	'transfer_modal.success_message' => 'Proprietatea %1$s a fost transferată de la %2$s la %3$s',
+	'transfer_modal.error_message.email_not_found' => 'Niciun cont de utilizator găsit cu această adresă de e-mail.',
+	'transfer_modal.error_message.self_transfer' => 'Nu puteți transfera o resursă în propriul cont.',
 	'statistics_reset_modal.header' => 'Șterge statisticile',
 	'statistics_reset_modal.subheader' => 'Șterge statisticile selectate în prezent. Această acțiune nu poate fi anulată.',
 	'x_reset_modal.header' => 'Resetare',
