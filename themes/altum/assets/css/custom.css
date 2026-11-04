@@ -1763,73 +1763,77 @@ i.xl {
 }
 
 .plan-billing-switcher {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 1rem;
-	flex-wrap: nowrap;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	gap: 1.25rem !important;
+	flex-wrap: nowrap !important;
 }
 
 .plan-billing-label {
-	color: var(--plan-text);
+	color: var(--plan-text, #1f2937);
 	font-size: .95rem;
-	font-weight: 500;
+	font-weight: 600;
 	white-space: nowrap;
+	margin: 0 !important;
+	padding: 0 !important;
 }
 
 .plan-billing-label span {
-	color: var(--plan-accent);
+	color: var(--plan-accent, #4f46e5);
 }
 
-.plan-billing-toggle {
-	display: inline-flex;
-	align-items: center;
-	position: relative;
-	width: 2.6rem;
-	height: 1.4rem;
-	padding: 0;
-	margin: 0;
-	flex-shrink: 0;
+.plan-switch-toggle {
+	position: relative !important;
+	display: inline-block !important;
+	width: 48px !important;
+	min-width: 48px !important;
+	height: 26px !important;
+	margin: 0 14px !important;
+	cursor: pointer !important;
+	flex-shrink: 0 !important;
+	vertical-align: middle !important;
 }
 
-.plan-billing-toggle .custom-control-label {
-	position: relative;
-	display: block;
-	width: 2.6rem;
-	height: 1.4rem;
-	margin: 0;
-	padding: 0;
-	cursor: pointer;
+.plan-switch-toggle input {
+	opacity: 0 !important;
+	width: 0 !important;
+	height: 0 !important;
+	position: absolute !important;
+	margin: 0 !important;
+	pointer-events: none;
 }
 
-.plan-billing-toggle .custom-control-label::before {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 2.6rem;
-	height: 1.4rem;
-	border: 0;
-	border-radius: 999px;
-	background: #d8d8d8;
+.plan-switch-slider {
+	position: absolute !important;
+	top: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	bottom: 0 !important;
+	background-color: #d1d5db !important;
+	border-radius: 26px !important;
+	transition: background-color .2s ease-in-out !important;
 }
 
-.plan-billing-toggle .custom-control-label::after {
-	position: absolute;
-	top: 0.2rem;
-	left: 0.25rem;
-	width: 1rem;
-	height: 1rem;
-	border-radius: 50%;
-	background: #fff;
-	transition: transform .15s ease-in-out;
+.plan-switch-slider::before {
+	position: absolute !important;
+	content: "" !important;
+	height: 20px !important;
+	width: 20px !important;
+	left: 3px !important;
+	bottom: 3px !important;
+	background-color: #ffffff !important;
+	border-radius: 50% !important;
+	transition: transform .2s ease-in-out !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
 }
 
-.plan-billing-toggle .custom-control-input:checked ~ .custom-control-label::before {
-	background: var(--plan-accent);
+.plan-switch-toggle input:checked + .plan-switch-slider {
+	background-color: var(--plan-accent, #4f46e5) !important;
 }
 
-.plan-billing-toggle .custom-control-input:checked ~ .custom-control-label::after {
-	transform: translateX(1.15rem);
+.plan-switch-toggle input:checked + .plan-switch-slider::before {
+	transform: translateX(22px) !important;
 }
 
 .plan-pricing-page .pricing-plan {

@@ -95,12 +95,12 @@
         <?php endif ?>
 
         <div class="mb-5 text-center plan-billing-switcher">
-            <div class="plan-billing-label">Billed Annually</div>
-            <div class="custom-control custom-switch plan-billing-toggle">
-                <input type="checkbox" class="custom-control-input" id="plan_billing_toggle" <?= settings()->payment->default_payment_frequency == 'monthly' ? 'checked="checked"' : null ?> />
-                <label class="custom-control-label" for="plan_billing_toggle"><span class="sr-only">Toggle billing frequency</span></label>
-            </div>
-            <div class="plan-billing-label">Billed Monthly</div>
+            <span class="plan-billing-label">Billed Annually</span>
+            <label class="plan-switch-toggle mb-0" for="plan_billing_toggle">
+                <input type="checkbox" id="plan_billing_toggle" <?= settings()->payment->default_payment_frequency == 'monthly' ? 'checked="checked"' : null ?> />
+                <span class="plan-switch-slider"></span>
+            </label>
+            <span class="plan-billing-label">Billed Monthly</span>
 
             <div class="btn-group btn-group-toggle btn-group-custom d-none" data-toggle="buttons">
 

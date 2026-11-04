@@ -2063,40 +2063,47 @@ class Pay extends Controller {
         $trial_skip_parameter = isset($_GET['trial_skip']) ? '&trial_skip=true' : '';
         $discount_code_parameter = isset($_GET['code']) ? '&code=' . $_GET['code'] : '';
 
+        $customer_name = !empty($this->user->name) ? $this->user->name : explode('@', $this->user->email)[0];
+        $customer_phone = !empty($this->user->billing->phone) ? $this->user->billing->phone : '';
+
+        /* Generate unique payment id */
+        $payment_id = md5(
+            $this->user->user_id .
+            $this->plan_id .
+            $_POST['payment_type'] .
+            $_POST['payment_frequency'] .
+            $this->user->email .
+            get_date()
+        );
+
+        $flutterwave_base_payload = [
+            'tx_ref' => $payment_id,
+            'amount' => $formatted_price,
+            'currency' => currency(),
+            'redirect_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount)),
+            'meta' => [
+                'user_id' => $this->user->user_id,
+                'plan_id' => $this->plan_id,
+                'payment_frequency' => $_POST['payment_frequency'],
+                'base_amount' => $base_amount,
+                'code' => $code,
+                'discount_amount' => $discount_amount,
+                'taxes_ids' => json_encode($this->applied_taxes_ids)
+            ],
+            'customer' => [
+                'email' => $this->user->email,
+                'name' => $customer_name,
+                'phonenumber' => $customer_phone
+            ],
+            'customizations' => [
+                'title' => settings()->business->brand_name ?: 'SeamlessQRCode',
+                'description' => $this->plan->name . ' - ' . ucfirst($_POST['payment_frequency'])
+            ]
+        ];
+
         switch ($_POST['payment_type']) {
 
             case 'one_time':
-
-                /* Generate unique payment id */
-                $payment_id = md5(
-                    $this->user->user_id .
-                    $this->plan_id .
-                    $_POST['payment_type'] .
-                    $_POST['payment_frequency'] .
-                    $this->user->email .
-                    get_date()
-                );
-
-                /* Prepare request body */
-                $flutterwave_payment_payload = [
-                    'tx_ref' => $payment_id,
-                    'amount' => $formatted_price,
-                    'currency' => currency(),
-                    'redirect_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount)),
-                    'meta' => [
-                        'user_id' => $this->user->user_id,
-                        'plan_id' => $this->plan_id,
-                        'payment_frequency' => $_POST['payment_frequency'],
-                        'base_amount' => $base_amount,
-                        'code' => $code,
-                        'discount_amount' => $discount_amount,
-                        'taxes_ids' => json_encode($this->applied_taxes_ids)
-                    ],
-                    'customer' => [
-                        'email' => $this->user->email,
-                        'name' => $this->user->name
-                    ]
-                ];
 
                 /* Make Flutterwave API request */
                 $flutterwave_response = \Unirest\Request::post(
@@ -2105,11 +2112,13 @@ class Pay extends Controller {
                         'Authorization' => 'Bearer ' . settings()->flutterwave->secret_key,
                         'Content-Type' => 'application/json',
                     ],
-                    \Unirest\Request\Body::json($flutterwave_payment_payload)
+                    \Unirest\Request\Body::json($flutterwave_base_payload)
                 );
 
-                if($flutterwave_response->code >= 400) {
-                    $flutterwave_error_message = (DEBUG || \Altum\Authentication::is_admin()) ? $flutterwave_response->body->message : l('pay.error_message.failed_payment');
+                if($flutterwave_response->code >= 400 || empty($flutterwave_response->body->data->link)) {
+                    $flutterwave_error_message = (DEBUG || \Altum\Authentication::is_admin()) 
+                        ? ($flutterwave_response->body->message ?? l('pay.error_message.failed_payment')) 
+                        : l('pay.error_message.failed_payment');
                     Alerts::add_error($flutterwave_error_message);
                     redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
                 }
@@ -2125,85 +2134,58 @@ class Pay extends Controller {
                     default => $_POST['payment_frequency']
                 };
 
-                /* Fetch existing payment plans */
-                $payment_plans_response = \Unirest\Request::get(
-                    'https://api.flutterwave.com/v3/payment-plans',
-                    [
-                        'Authorization' => 'Bearer ' . settings()->flutterwave->secret_key,
-                        'Content-Type' => 'application/json',
-                    ]
-                );
-
-                if($payment_plans_response->code >= 400) {
-                    $flutterwave_error_message = (DEBUG || \Altum\Authentication::is_admin()) ? $payment_plans_response->body->message : l('pay.error_message.failed_payment');
-                    Alerts::add_error($flutterwave_error_message);
-                    redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
-                }
-
-                /* Find existing plan or create new one */
                 $payment_plan = null;
-                foreach ($payment_plans_response->body->data as $existing_plan) {
-                    if($existing_plan->amount == $formatted_price && $existing_plan->interval == $flutterwave_payment_frequency) {
-                        $payment_plan = $existing_plan;
-                        break;
-                    }
-                }
 
-                if(!$payment_plan) {
-                    $create_plan_response = \Unirest\Request::post(
+                /* Try to fetch or create recurring plan */
+                try {
+                    $payment_plans_response = \Unirest\Request::get(
                         'https://api.flutterwave.com/v3/payment-plans',
                         [
                             'Authorization' => 'Bearer ' . settings()->flutterwave->secret_key,
                             'Content-Type' => 'application/json',
-                        ],
-                        \Unirest\Request\Body::json([
-                            'name' => settings()->business->brand_name . ' - ' . $this->plan->name,
-                            'amount' => $formatted_price,
-                            'currency' => currency(),
-                            'interval' => $flutterwave_payment_frequency
-                        ])
+                        ]
                     );
 
-                    if($create_plan_response->code >= 400) {
-                        $flutterwave_error_message = (DEBUG || \Altum\Authentication::is_admin()) ? $create_plan_response->body->message : l('pay.error_message.failed_payment');
-                        Alerts::add_error($flutterwave_error_message);
-                        redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
+                    if($payment_plans_response->code < 400 && !empty($payment_plans_response->body->data) && is_iterable($payment_plans_response->body->data)) {
+                        foreach ($payment_plans_response->body->data as $existing_plan) {
+                            if(
+                                $existing_plan->amount == $formatted_price && 
+                                $existing_plan->interval == $flutterwave_payment_frequency &&
+                                (!isset($existing_plan->currency) || strtoupper($existing_plan->currency) == strtoupper(currency()))
+                            ) {
+                                $payment_plan = $existing_plan;
+                                break;
+                            }
+                        }
                     }
 
-                    $payment_plan = $create_plan_response->body->data;
+                    if(!$payment_plan) {
+                        $create_plan_response = \Unirest\Request::post(
+                            'https://api.flutterwave.com/v3/payment-plans',
+                            [
+                                'Authorization' => 'Bearer ' . settings()->flutterwave->secret_key,
+                                'Content-Type' => 'application/json',
+                            ],
+                            \Unirest\Request\Body::json([
+                                'name' => (settings()->business->brand_name ?: 'Seamless') . ' - ' . $this->plan->name . ' (' . currency() . ')',
+                                'amount' => $formatted_price,
+                                'currency' => currency(),
+                                'interval' => $flutterwave_payment_frequency
+                            ])
+                        );
+
+                        if($create_plan_response->code < 400 && !empty($create_plan_response->body->data)) {
+                            $payment_plan = $create_plan_response->body->data;
+                        }
+                    }
+                } catch (\Exception $exception) {
+                    $payment_plan = null;
                 }
 
-                /* Generate unique payment id */
-                $payment_id = md5(
-                    $this->user->user_id .
-                    $this->plan_id .
-                    $_POST['payment_type'] .
-                    $_POST['payment_frequency'] .
-                    $this->user->email .
-                    get_date()
-                );
-
-                /* Prepare request body for recurring payment */
-                $flutterwave_recurring_payload = [
-                    'payment_plan' => $payment_plan->id,
-                    'tx_ref' => $payment_id,
-                    'amount' => $formatted_price,
-                    'currency' => currency(),
-                    'redirect_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount)),
-                    'meta' => [
-                        'user_id' => $this->user->user_id,
-                        'plan_id' => $this->plan_id,
-                        'payment_frequency' => $_POST['payment_frequency'],
-                        'base_amount' => $base_amount,
-                        'code' => $code,
-                        'discount_amount' => $discount_amount,
-                        'taxes_ids' => json_encode($this->applied_taxes_ids)
-                    ],
-                    'customer' => [
-                        'email' => $this->user->email,
-                        'name' => $this->user->name
-                    ]
-                ];
+                $flutterwave_recurring_payload = $flutterwave_base_payload;
+                if($payment_plan && !empty($payment_plan->id)) {
+                    $flutterwave_recurring_payload['payment_plan'] = $payment_plan->id;
+                }
 
                 $flutterwave_recurring_response = \Unirest\Request::post(
                     'https://api.flutterwave.com/v3/payments',
@@ -2214,8 +2196,24 @@ class Pay extends Controller {
                     \Unirest\Request\Body::json($flutterwave_recurring_payload)
                 );
 
-                if($flutterwave_recurring_response->code >= 400) {
-                    $flutterwave_error_message = (DEBUG || \Altum\Authentication::is_admin()) ? $flutterwave_recurring_response->body->message : l('pay.error_message.failed_payment');
+                /* If recurring payment plan request fails (e.g. Flutterwave rejects USD recurring or currency mismatch), fallback to standard payment link */
+                if(($flutterwave_recurring_response->code >= 400 || empty($flutterwave_recurring_response->body->data->link)) && isset($flutterwave_recurring_payload['payment_plan'])) {
+                    unset($flutterwave_recurring_payload['payment_plan']);
+
+                    $flutterwave_recurring_response = \Unirest\Request::post(
+                        'https://api.flutterwave.com/v3/payments',
+                        [
+                            'Authorization' => 'Bearer ' . settings()->flutterwave->secret_key,
+                            'Content-Type' => 'application/json',
+                        ],
+                        \Unirest\Request\Body::json($flutterwave_recurring_payload)
+                    );
+                }
+
+                if($flutterwave_recurring_response->code >= 400 || empty($flutterwave_recurring_response->body->data->link)) {
+                    $flutterwave_error_message = (DEBUG || \Altum\Authentication::is_admin()) 
+                        ? ($flutterwave_recurring_response->body->message ?? l('pay.error_message.failed_payment')) 
+                        : l('pay.error_message.failed_payment');
                     Alerts::add_error($flutterwave_error_message);
                     redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
                 }
