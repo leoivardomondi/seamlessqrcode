@@ -10,10 +10,10 @@ $has_details_form = !empty($settings->details_form_is_enabled);
 /* Background CSS generation */
 $bg_css = '';
 if(($settings->background_type ?? 'default') == 'color' && !empty($settings->background_color)) {
-    $bg_css = 'background-color: ' . $settings->background_color . ' !important;';
+    $bg_css = "background-color: " . $settings->background_color . " !important;";
 } elseif(($settings->background_type ?? 'default') == 'gradient' && !empty($settings->background_color_one) && !empty($settings->background_color_two)) {
     $direction = $settings->background_gradient_direction ?? '135deg';
-    $bg_css = 'background: linear-gradient(' . $direction . ', ' . $settings->background_color_one . ', ' . $settings->background_color_two . ') !important; background-attachment: fixed !important;';
+    $bg_css = "background: linear-gradient(" . $direction . ", " . $settings->background_color_one . ", " . $settings->background_color_two . ") !important; background-attachment: fixed !important;";
 } elseif(($settings->background_type ?? 'default') == 'image' && !empty($settings->background)) {
     $bg_css = "background: url('" . \Altum\Uploads::get_full_url('splash_pages') . $settings->background . "') no-repeat center center / cover !important; background-attachment: fixed !important;";
 }
@@ -59,25 +59,25 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         <?php endif ?>
     }
 
-    /* Form Card Styling */
+    /* Form Card Styling - Wider & Reduced Height */
     .splash-form-card {
         background-color: <?= $settings->form_card_background_color ?? '#18181b' ?> !important;
         color: <?= $settings->form_card_text_color ?? '#f4f4f5' ?> !important;
         border: 1px solid <?= $settings->form_card_border_color ?? '#27272a' ?> !important;
-        border-radius: 1.25rem;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
-        padding: 1.75rem 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 16px 28px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -5px rgba(0, 0, 0, 0.3);
+        padding: 1.15rem 1.35rem !important;
         text-align: left;
     }
 
     .splash-form-card .form-label-caps {
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-size: 0.7rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.08em !important;
+        text-transform: uppercase !important;
         color: <?= $settings->form_card_text_color ?? '#f4f4f5' ?>;
         opacity: 0.8;
-        margin-bottom: 0.45rem;
+        margin-bottom: 0.2rem !important;
         display: block;
     }
 
@@ -85,16 +85,18 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         background-color: rgba(255, 255, 255, 0.06) !important;
         border: 1px solid rgba(255, 255, 255, 0.16) !important;
         color: <?= $settings->form_card_text_color ?? '#ffffff' ?> !important;
-        border-radius: 0.6rem;
-        padding: 0.75rem 1rem;
-        font-size: 0.95rem;
+        border-radius: 0.5rem !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        padding: 0.35rem 0.85rem !important;
+        font-size: 0.9rem !important;
         transition: all 0.2s ease-in-out;
     }
 
     .splash-form-card .form-control:focus {
         background-color: rgba(255, 255, 255, 0.1) !important;
         border-color: rgba(255, 255, 255, 0.4) !important;
-        box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 0 0 0.15rem rgba(255, 255, 255, 0.1) !important;
     }
 
     .splash-form-card .form-control::placeholder {
@@ -103,11 +105,11 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
     }
 
     .splash-form-card .custom-control-label {
-        font-size: 0.88rem;
+        font-size: 0.82rem !important;
         color: <?= $settings->form_card_text_color ?? '#ffffff' ?>;
         opacity: 0.9;
         cursor: pointer;
-        line-height: 1.45;
+        line-height: 1.35 !important;
     }
 
     .splash-form-card .custom-checkbox .custom-control-label::before {
@@ -127,11 +129,11 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         align-items: center !important;
         justify-content: center !important;
         width: 100% !important;
-        height: 48px !important;
-        min-height: 48px !important;
-        max-height: 48px !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
         padding: 0 1.25rem !important;
-        font-size: 0.95rem !important;
+        font-size: 0.92rem !important;
         font-weight: 700 !important;
         letter-spacing: 0.06em !important;
         text-transform: uppercase !important;
@@ -156,13 +158,13 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 600;
         letter-spacing: 0.06em;
         text-transform: uppercase;
         text-decoration: none !important;
         opacity: 0.8;
-        padding: 0.5rem 0.75rem;
+        padding: 0.35rem 0.6rem;
         transition: opacity 0.2s ease, transform 0.15s ease;
     }
     .btn-splash-skip:hover {
@@ -176,11 +178,11 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         align-items: center !important;
         justify-content: center !important;
         width: 100% !important;
-        height: 44px !important;
-        min-height: 44px !important;
-        max-height: 44px !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
         padding: 0 1.25rem !important;
-        font-size: 0.85rem !important;
+        font-size: 0.82rem !important;
         font-weight: 600 !important;
         letter-spacing: 0.06em !important;
         text-transform: uppercase !important;
@@ -211,22 +213,22 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
 
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8 py-5">
+        <div class="col-12 col-md-11 col-lg-9 py-3 py-md-4">
             <?= \Altum\Alerts::output_alerts() ?>
 
             <div class="text-center">
                 <?php if(!empty($data->splash_page->settings->logo)): ?>
-                    <div class="d-flex flex-column align-items-center mb-4">
-                        <img src="<?= \Altum\Uploads::get_full_url('splash_pages') . $data->splash_page->settings->logo ?>" class="link-image link-avatar-round" alt="<?= $data->splash_page->name ?>" />
+                    <div class="d-flex flex-column align-items-center mb-3">
+                        <img src="<?= \Altum\Uploads::get_full_url('splash_pages') . $data->splash_page->settings->logo ?>" class="link-image link-avatar-round" style="width: 80px; height: 80px; object-fit: cover;" alt="<?= $data->splash_page->name ?>" />
                     </div>
                 <?php endif ?>
 
                 <?php if(!empty($data->splash_page->title)): ?>
-                    <h1 class="h3 splash-title mb-2 font-weight-bold"><?= $data->splash_page->title ?></h1>
+                    <h1 class="h4 splash-title mb-1 font-weight-bold"><?= $data->splash_page->title ?></h1>
                 <?php endif ?>
 
                 <?php if(!empty($data->splash_page->description)): ?>
-                    <div class="splash-description text-muted mb-4" style="max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                    <div class="splash-description text-muted mb-3" style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto; line-height: 1.4; font-size: 0.95rem;">
                         <?= $data->splash_page->description ?>
                     </div>
                 <?php endif ?>
@@ -234,27 +236,27 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                 <?php if($has_details_form): ?>
                     <!-- Optional Customer Details Capture Feature -->
                     <?php if(!empty($settings->form_title)): ?>
-                        <div class="splash-title h5 font-weight-normal mb-3" style="max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                        <div class="splash-title h6 font-weight-normal mb-2" style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto; line-height: 1.4;">
                             <?= $settings->form_title ?>
                         </div>
                     <?php endif ?>
 
                     <?php if(!empty($settings->form_subtitle)): ?>
-                        <div class="splash-description small text-muted mb-4" style="max-width: 520px; margin-left: auto; margin-right: auto;">
+                        <div class="splash-description small text-muted mb-2" style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto;">
                             <?= $settings->form_subtitle ?>
                         </div>
                     <?php endif ?>
 
-                    <form id="splash_details_form" method="post" role="form" style="max-width: 520px; margin-left: auto; margin-right: auto;">
+                    <form id="splash_details_form" method="post" role="form" style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto;">
                         <input type="hidden" name="token" value="<?= \Altum\Csrf::get() ?>" />
                         <input type="hidden" name="link_id" value="<?= $link_id ?>" />
                         <input type="hidden" name="splash_page_id" value="<?= $data->splash_page->splash_page_id ?? 0 ?>" />
 
-                        <div class="notification-container mb-3"></div>
+                        <div class="notification-container mb-2"></div>
 
-                        <div class="splash-form-card mb-3">
+                        <div class="splash-form-card mb-2">
                             <?php if($settings->form_show_name ?? true): ?>
-                                <div class="form-group mb-3">
+                                <div class="form-group mb-2">
                                     <label for="splash_name" class="form-label-caps">
                                         <?= $settings->form_name_label ?: l('splash_pages.form_name_label_default') ?>
                                     </label>
@@ -263,7 +265,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                             <?php endif ?>
 
                             <?php if($settings->form_show_phone ?? true): ?>
-                                <div class="form-group mb-3">
+                                <div class="form-group mb-2">
                                     <label for="splash_phone" class="form-label-caps">
                                         <?= $settings->form_phone_label ?: l('splash_pages.form_phone_label_default') ?>
                                     </label>
@@ -272,7 +274,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                             <?php endif ?>
 
                             <?php if($settings->form_show_email ?? true): ?>
-                                <div class="form-group mb-3">
+                                <div class="form-group mb-2">
                                     <label for="splash_email" class="form-label-caps">
                                         <?= $settings->form_email_label ?: l('splash_pages.form_email_label_default') ?>
                                     </label>
@@ -281,7 +283,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                             <?php endif ?>
 
                             <?php if($settings->form_show_consent ?? true): ?>
-                                <div class="form-group custom-control custom-checkbox mt-3 mb-1">
+                                <div class="form-group custom-control custom-checkbox mt-2 mb-0">
                                     <input type="checkbox" id="splash_consent" name="consent" class="custom-control-input" value="1" <?= !empty($settings->form_consent_required) ? 'required="required"' : null ?> />
                                     <label class="custom-control-label" for="splash_consent">
                                         <?= $settings->form_consent_text ?: l('splash_pages.form_consent_text_default') ?>
@@ -291,12 +293,12 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                         </div>
 
                         <!-- Steady standard single-line submit button -->
-                        <button type="submit" class="btn btn-block btn-splash-submit mb-3 <?= $settings->primary_button_border_radius ?? 'rounded' ?>" style="background-color: <?= $settings->form_submit_button_background_color ?? '#eab308' ?>; color: <?= $settings->form_submit_button_text_color ?? '#000000' ?>;">
+                        <button type="submit" class="btn btn-block btn-splash-submit mb-2 <?= $settings->primary_button_border_radius ?? 'rounded' ?>" style="background-color: <?= $settings->form_submit_button_background_color ?? '#eab308' ?>; color: <?= $settings->form_submit_button_text_color ?? '#000000' ?>;">
                             <?= $settings->form_submit_button_text ?: l('splash_pages.form_submit_button_text_default') ?>
                         </button>
 
                         <!-- Skip button directly below submit button -->
-                        <div class="text-center">
+                        <div class="text-center mb-1">
                             <a href="#" id="splash_skip_button" class="btn-splash-skip" style="color: <?= $settings->description_color ?? '#a1a1aa' ?>;">
                                 <?= $settings->form_skip_button_text ?: l('splash_pages.form_skip_button_text_default') ?> <i class="fas fa-fw fa-xs fa-arrow-right ml-1"></i>
                             </a>
@@ -304,7 +306,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                     </form>
 
                     <?php if(!empty($settings->secondary_button_url)): ?>
-                        <div style="max-width: 520px; margin-left: auto; margin-right: auto;" class="mt-4">
+                        <div style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto;" class="mt-3">
                             <a href="<?= $settings->secondary_button_url ?>" class="btn btn-block btn-splash-secondary-block <?= $settings->secondary_button_border_radius ?? 'rounded' ?>">
                                 <i class="fas fa-fw fa-sm fa-home mr-2"></i>
                                 <?= $settings->secondary_button_name ?: l('link.splash.home') ?>
@@ -314,10 +316,10 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
 
                 <?php else: ?>
                     <!-- Standard Splash Page (Timer + Continue) -->
-                    <form>
-                        <div class="row mt-4 justify-content-center">
+                    <form style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto;">
+                        <div class="row mt-3 justify-content-center">
                             <?php if(!empty($settings->secondary_button_url)): ?>
-                                <div class="col-6 col-md-5">
+                                <div class="col-6">
                                     <a href="<?= $settings->secondary_button_url ?>" class="btn btn-block btn-splash-secondary <?= $settings->secondary_button_border_radius ?? 'rounded' ?>">
                                         <?php if(!$settings->secondary_button_name): ?>
                                             <i class="fas fa-fw fa-sm fa-home mr-1"></i>
@@ -327,7 +329,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                                 </div>
                             <?php endif ?>
 
-                            <div class="<?= !empty($settings->secondary_button_url) ? 'col-6 col-md-5' : 'col-12 col-md-6' ?>">
+                            <div class="<?= !empty($settings->secondary_button_url) ? 'col-6' : 'col-12' ?>">
                                 <a href="#" id="link_continue" class="btn btn-block btn-splash-primary <?= $settings->primary_button_border_radius ?? 'rounded' ?> disabled">
                                     <i class="fas fa-fw fa-sm fa-link mr-1"></i> <?= $primary_btn_name ?>
                                 </a>
@@ -336,7 +338,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                     </form>
                 <?php endif ?>
 
-                <div class="text-muted mt-3" id="link_unlock_seconds">
+                <div class="text-muted mt-2 small" id="link_unlock_seconds">
                     <?= sprintf(l('link.splash.link_unlock_seconds'), $data->splash_page->link_unlock_seconds ?? settings()->links->splash_page_link_unlock_seconds) ?>
                 </div>
             </div>
@@ -357,16 +359,21 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
 
     let link_unlock_seconds_remaining = link_unlock_seconds;
 
+    let get_unlocked_url = (url) => {
+        let separator = url.indexOf('?') !== -1 ? '&' : '?';
+        return url + separator + 'splash=passed';
+    };
+
     let unlock_link = () => {
         document.querySelector('#link_unlock_seconds').classList.add('d-none');
         let continue_btn = document.querySelector('#link_continue');
         if(continue_btn) {
             continue_btn.classList.remove('disabled');
-            continue_btn.href = destination_url;
+            continue_btn.href = get_unlocked_url(destination_url);
         }
 
         if(splash_page_auto_redirect && !has_details_form) {
-            window.location.replace(destination_url);
+            window.location.replace(get_unlocked_url(destination_url));
         }
 
         if(link_id && !always_show) {
@@ -397,7 +404,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
             if(link_id && !always_show) {
                 set_cookie('link_unlocked_' + link_id, <?= json_encode(md5($link_id . $link_id)) ?>, 1, <?= json_encode(COOKIE_PATH) ?>);
             }
-            window.location.replace(destination_url);
+            window.location.replace(get_unlocked_url(destination_url));
         });
     }
 
@@ -428,7 +435,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                             set_cookie('link_unlocked_' + link_id, <?= json_encode(md5($link_id . $link_id)) ?>, 1, <?= json_encode(COOKIE_PATH) ?>);
                         }
                         setTimeout(() => {
-                            window.location.replace(data.details.destination_url || destination_url);
+                            window.location.replace(get_unlocked_url(data.details.destination_url || destination_url));
                         }, 800);
                     }
                 },

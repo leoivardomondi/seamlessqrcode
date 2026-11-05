@@ -128,15 +128,17 @@ class Link extends Controller {
 
         $always_show = !empty($splash_page->settings->always_show);
         $is_cookie_unlocked = ($_COOKIE['link_unlocked_' . $this->link->link_id] ?? null) === md5($this->link->link_id . $this->link->link_id);
+        $is_passed = (isset($_GET['splash']) && $_GET['splash'] === 'passed') || (isset($_GET['skip_splash']) && $_GET['skip_splash'] == '1');
+        $is_unlocked = $is_passed || (!$always_show && $is_cookie_unlocked);
 
         if(
             settings()->links->splash_page_is_enabled
             && !$this->is_preview
+            && !$is_unlocked
             && (
                 ($this->user->plan_settings->{'force_splash_page_on_' . $this->link->type} && !$this->user->plan_settings->splash_pages_limit)
                 || ($this->link->splash_page_id && $this->user->plan_settings->splash_pages_limit)
             )
-            && (!$is_cookie_unlocked || $always_show)
         ) {
 
             /* Display splash page on each load? or configurable amount of times */
@@ -2220,13 +2222,18 @@ class Link extends Controller {
             // fail-safe
         }
 
-        /* Set unlock cookie */
-        setcookie('link_unlocked_' . $link->link_id, md5($link->link_id . $link->link_id), time() + 60 * 60 * 24 * 1, COOKIE_PATH);
+        /* Set unlock cookie if not always_show */
+        if(empty($splash_page->settings->always_show)) {
+            setcookie('link_unlocked_' . $link->link_id, md5($link->link_id . $link->link_id), time() + 60 * 60 * 24 * 1, COOKIE_PATH);
+        }
 
         $success_message = !empty($splash_page->settings->form_success_message) ? $splash_page->settings->form_success_message : l('splash_pages.form_success_message_default');
 
+        $dest = $link->full_url ?? url();
+        $sep = str_contains($dest, '?') ? '&' : '?';
+
         \Altum\Response::json($success_message, 'success', [
-            'destination_url' => $link->full_url ?? url(),
+            'destination_url' => $dest . $sep . 'splash=passed',
         ]);
     }
 
