@@ -172,43 +172,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         transform: translateX(2px);
     }
 
-    /* Full-width standard secondary home button */
-    .btn-splash-secondary-block {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 100% !important;
-        height: 40px !important;
-        min-height: 40px !important;
-        max-height: 40px !important;
-        padding: 0 1.25rem !important;
-        font-size: 0.82rem !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.06em !important;
-        text-transform: uppercase !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        box-sizing: border-box !important;
-        text-decoration: none !important;
-        <?php if(!empty($settings->secondary_button_background_color)): ?>
-        background-color: <?= $settings->secondary_button_background_color ?> !important;
-        border: 1px solid <?= $settings->secondary_button_background_color ?> !important;
-        <?php else: ?>
-        background-color: #27272a !important;
-        border: 1px solid #3f3f46 !important;
-        <?php endif ?>
-        <?php if(!empty($settings->secondary_button_text_color)): ?>
-        color: <?= $settings->secondary_button_text_color ?> !important;
-        <?php else: ?>
-        color: #ffffff !important;
-        <?php endif ?>
-        transition: filter 0.15s ease;
-    }
-    .btn-splash-secondary-block:hover {
-        filter: brightness(1.15);
-        color: <?= $settings->secondary_button_text_color ?? '#ffffff' ?> !important;
-    }
+
 </style>
 
 <div class="container">
@@ -305,14 +269,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                         </div>
                     </form>
 
-                    <?php if(!empty($settings->secondary_button_url)): ?>
-                        <div style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto;" class="mt-3">
-                            <a href="<?= $settings->secondary_button_url ?>" class="btn btn-block btn-splash-secondary-block <?= $settings->secondary_button_border_radius ?? 'rounded' ?>">
-                                <i class="fas fa-fw fa-sm fa-home mr-2"></i>
-                                <?= $settings->secondary_button_name ?: l('link.splash.home') ?>
-                            </a>
-                        </div>
-                    <?php endif ?>
+
 
                 <?php else: ?>
                     <!-- Standard Splash Page (Timer + Continue) -->
