@@ -49,15 +49,7 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
         <?php endif ?>
     }
 
-    .btn-splash-secondary {
-        <?php if(!empty($settings->secondary_button_background_color)): ?>
-        background-color: <?= $settings->secondary_button_background_color ?> !important;
-        border-color: <?= $settings->secondary_button_background_color ?> !important;
-        <?php endif ?>
-        <?php if(!empty($settings->secondary_button_text_color)): ?>
-        color: <?= $settings->secondary_button_text_color ?> !important;
-        <?php endif ?>
-    }
+
 
     /* Form Card Styling - Wider & Reduced Height */
     .splash-form-card {
@@ -274,23 +266,10 @@ if(($settings->background_type ?? 'default') == 'color' && !empty($settings->bac
                 <?php else: ?>
                     <!-- Standard Splash Page (Timer + Continue) -->
                     <form style="max-width: 580px; width: 100%; margin-left: auto; margin-right: auto;">
-                        <div class="row mt-3 justify-content-center">
-                            <?php if(!empty($settings->secondary_button_url)): ?>
-                                <div class="col-6">
-                                    <a href="<?= $settings->secondary_button_url ?>" class="btn btn-block btn-splash-secondary <?= $settings->secondary_button_border_radius ?? 'rounded' ?>">
-                                        <?php if(!$settings->secondary_button_name): ?>
-                                            <i class="fas fa-fw fa-sm fa-home mr-1"></i>
-                                        <?php endif ?>
-                                        <?= $settings->secondary_button_name ?: l('link.splash.home') ?>
-                                    </a>
-                                </div>
-                            <?php endif ?>
-
-                            <div class="<?= !empty($settings->secondary_button_url) ? 'col-6' : 'col-12' ?>">
-                                <a href="#" id="link_continue" class="btn btn-block btn-splash-primary <?= $settings->primary_button_border_radius ?? 'rounded' ?> disabled">
-                                    <i class="fas fa-fw fa-sm fa-link mr-1"></i> <?= $primary_btn_name ?>
-                                </a>
-                            </div>
+                        <div class="mt-3">
+                            <a href="#" id="link_continue" class="btn btn-block btn-splash-primary <?= $settings->primary_button_border_radius ?? 'rounded' ?> disabled">
+                                <i class="fas fa-fw fa-sm fa-link mr-1"></i> <?= $primary_btn_name ?>
+                            </a>
                         </div>
                     </form>
                 <?php endif ?>
