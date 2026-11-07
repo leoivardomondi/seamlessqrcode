@@ -202,9 +202,15 @@
 
                 <td class="text-nowrap">
                     <div class="d-flex flex-column">
-                        <span><?= l('pay.custom_plan.' . $row->type . '_type') ?></span>
+                        <div class="d-flex align-items-center">
+                            <span class="mr-2"><?= l('pay.custom_plan.' . $row->type . '_type') ?></span>
+                            <?= $row->status ? '<span class="badge badge-success small py-0 px-1">' . (l('admin_payments.filters.status_paid') ?? 'Approved') . '</span>' : '<span class="badge badge-warning small py-0 px-1">' . (l('admin_payments.filters.status_pending') ?? 'Pending') . '</span>' ?>
+                        </div>
                         <div>
                             <span class="text-muted"><?= l('pay.custom_plan.' . $row->frequency) ?></span> - <span class="text-muted"><?= l('pay.custom_plan.' . $row->processor) ?></span>
+                            <?php if(!empty($row->payment_id) && strlen($row->payment_id) <= 24 && !ctype_xdigit($row->payment_id)): ?>
+                                <span class="badge badge-light text-muted small ml-1"><?= $row->payment_id ?></span>
+                            <?php endif ?>
                         </div>
                     </div>
                 </td>

@@ -80,7 +80,7 @@ return [
 
     /* Payment proofs for offline payments */
     'offline_payment_proofs' => [
-        'whitelisted_file_extensions' => ['jpg', 'jpeg', 'png', 'webp', 'avif', 'pdf'],
+        'whitelisted_file_extensions' => ['jpg', 'jpeg', 'png', 'webp', 'avif', 'pdf', 'txt'],
         'path' => 'offline_payment_proofs/',
     ],
 

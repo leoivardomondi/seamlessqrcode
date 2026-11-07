@@ -878,6 +878,114 @@ class Pay extends Controller {
 
     }
 
+    private function parse_offline_payment_confirmation($text, $expected_amount = null) {
+        $text = trim($text ?? '');
+        if(empty($text)) {
+            return [
+                'is_valid' => false,
+                'code' => null,
+                'amount' => null,
+                'datetime' => null,
+                'raw_text' => null,
+            ];
+        }
+
+        $result = [
+            'is_valid' => false,
+            'code' => null,
+            'amount' => null,
+            'datetime' => null,
+            'raw_text' => $text,
+        ];
+
+        /* 1. Transaction Code (M-PESA / Bank / Airtel) */
+        if(preg_match('/\b([A-Z0-9]{10})\s+(?:Confirmed|confirmed)/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        } else if(preg_match('/(?:Trans(?:action)?\s*(?:ID|Id|id|No|Ref)?|Ref(?:erence)?)\s*[:#.]?\s*([A-Z0-9]{6,20})/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        } else if(preg_match('/\b([A-Z]{2}[0-9A-Z]{8})\b/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        } else if(preg_match('/^([A-Z0-9]{8,14})\b/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        }
+
+        /* 2. Amount */
+        if(preg_match('/(?:Ksh|KES|\$|USD)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i', $text, $match)) {
+            $result['amount'] = (float) str_replace(',', '', $match[1]);
+        } else if(preg_match('/(?:sent|paid|received|transferred)\s*(?:to|from)?\s*(?:Ksh|KES|\$)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i', $text, $match)) {
+            $result['amount'] = (float) str_replace(',', '', $match[1]);
+        }
+
+        /* 3. Date and Time Extraction */
+        if(preg_match('/(?:on|On|dated|date:?)\s*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s+at|\s*,|\s+)\s*(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i', $text, $match)) {
+            $day = (int) $match[1];
+            $month = (int) $match[2];
+            $year = (int) $match[3];
+            $time = $match[4];
+
+            if($year < 100) $year += 2000;
+            if($month > 12 && $day <= 12) {
+                $tmp = $day;
+                $day = $month;
+                $month = $tmp;
+            }
+
+            $formatted = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
+            $timestamp = strtotime($formatted);
+            if($timestamp) {
+                $result['datetime'] = date('Y-m-d H:i:s', $timestamp);
+            }
+        } else if(preg_match('/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\s+at\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i', $text, $match)) {
+            $day = (int) $match[1];
+            $month = (int) $match[2];
+            $year = (int) $match[3];
+            $time = $match[4];
+
+            if($year < 100) $year += 2000;
+            if($month > 12 && $day <= 12) {
+                $tmp = $day;
+                $day = $month;
+                $month = $tmp;
+            }
+
+            $formatted = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
+            $timestamp = strtotime($formatted);
+            if($timestamp) {
+                $result['datetime'] = date('Y-m-d H:i:s', $timestamp);
+            }
+        } else if(preg_match('/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/i', $text, $match)) {
+            $day = (int) $match[1];
+            $month = (int) $match[2];
+            $year = (int) $match[3];
+            if($year < 100) $year += 2000;
+            if($month > 12 && $day <= 12) {
+                $tmp = $day;
+                $day = $month;
+                $month = $tmp;
+            }
+            $result['datetime'] = sprintf('%04d-%02d-%02d 12:00:00', $year, $month, $day);
+        }
+
+        /* 4. Determine if valid for automatic activation */
+        $has_code = !empty($result['code']);
+        $has_date = !empty($result['datetime']);
+        $amount_matches = true;
+
+        if($expected_amount !== null && (float) $expected_amount > 0) {
+            if($result['amount'] !== null) {
+                $amount_matches = ($result['amount'] >= ((float) $expected_amount - 1.0));
+            } else {
+                $amount_matches = false;
+            }
+        }
+
+        if($has_code && $has_date && $amount_matches) {
+            $result['is_valid'] = true;
+        }
+
+        return $result;
+    }
+
     private function offline_payment() {
 
         /* Redirect to thank you page if returning from a successful offline payment */
@@ -902,8 +1010,19 @@ class Pay extends Controller {
             get_date()
         );
 
-        /* Check if offline payment proof was provided */
-        $offline_payment_proof_provided = !empty($_FILES['offline_payment_proof']['name']);
+        /* Check if confirmation text was pasted */
+        $offline_payment_proof_text = isset($_POST['offline_payment_proof_text']) ? trim($_POST['offline_payment_proof_text']) : '';
+
+        /* Read text from uploaded text file if proof text is empty */
+        if(empty($offline_payment_proof_text) && !empty($_FILES['offline_payment_proof']['name']) && !empty($_FILES['offline_payment_proof']['tmp_name'])) {
+            $uploaded_ext = pathinfo($_FILES['offline_payment_proof']['name'], PATHINFO_EXTENSION);
+            if(strtolower($uploaded_ext) === 'txt') {
+                $offline_payment_proof_text = trim(file_get_contents($_FILES['offline_payment_proof']['tmp_name']));
+            }
+        }
+
+        /* Check if offline payment proof (file or text) was provided */
+        $offline_payment_proof_provided = !empty($_FILES['offline_payment_proof']['name']) || !empty($offline_payment_proof_text);
 
         /* Prepare redirect query parameters */
         $trial_skip_parameter = isset($_GET['trial_skip']) ? '&trial_skip=true' : '';
@@ -915,21 +1034,57 @@ class Pay extends Controller {
             redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
         }
 
-        /* Handle file upload for offline payment proof */
-        $offline_payment_proof_file = \Altum\Uploads::process_upload(
-            null,
-            'offline_payment_proofs',
-            'offline_payment_proof',
-            'offline_payment_proof_remove',
-            settings()->offline_payment->proof_size_limit
-        );
+        /* Parse confirmation message for payment info, date, amount, and reference code */
+        $parsed_payment = $this->parse_offline_payment_confirmation($offline_payment_proof_text, $price_with_taxes);
+
+        /* Check if transaction code has already been used in an approved payment */
+        if(!empty($parsed_payment['code'])) {
+            $is_already_approved = db()->where('payment_id', $parsed_payment['code'])->where('status', 1)->has('payments');
+            if($is_already_approved) {
+                $parsed_payment['is_valid'] = false;
+            }
+        }
+
+        $payment_datetime = $parsed_payment['datetime'] ?: get_date();
+        $external_payment_id = $parsed_payment['code'] ?: $payment_unique_id;
+
+        /* Handle file upload for offline payment proof or save text receipt */
+        $offline_payment_proof_file = null;
+        if(!empty($_FILES['offline_payment_proof']['name'])) {
+            $offline_payment_proof_file = \Altum\Uploads::process_upload(
+                null,
+                'offline_payment_proofs',
+                'offline_payment_proof',
+                'offline_payment_proof_remove',
+                settings()->offline_payment->proof_size_limit
+            );
+        } else if(!empty($offline_payment_proof_text)) {
+            $txt_filename = md5($payment_unique_id . microtime()) . '.txt';
+            $txt_content = "=== PAYMENT CONFIRMATION RECEIPT ===" . PHP_EOL;
+            if(!empty($parsed_payment['code'])) $txt_content .= "Transaction Ref: " . $parsed_payment['code'] . PHP_EOL;
+            if(!empty($parsed_payment['amount'])) $txt_content .= "Amount: " . $parsed_payment['amount'] . " " . currency() . PHP_EOL;
+            if(!empty($parsed_payment['datetime'])) $txt_content .= "Extracted Payment Date: " . $parsed_payment['datetime'] . PHP_EOL;
+            $txt_content .= "Auto-Activated: " . ($parsed_payment['is_valid'] ? 'YES' : 'NO') . PHP_EOL;
+            $txt_content .= PHP_EOL . "=== CONFIRMATION MESSAGE ===" . PHP_EOL;
+            $txt_content .= $offline_payment_proof_text . PHP_EOL;
+
+            $proof_dir = \Altum\Uploads::get_full_path('offline_payment_proofs');
+            if(!is_dir($proof_dir)) {
+                @mkdir($proof_dir, 0755, true);
+            }
+            file_put_contents($proof_dir . $txt_filename, $txt_content);
+            $offline_payment_proof_file = $txt_filename;
+        }
 
         /* If there are field errors, redirect back */
         if(Alerts::has_field_errors() && !Alerts::has_errors()) {
             redirect('pay/' . $this->plan_id . '?' . $trial_skip_parameter . $discount_code_parameter);
         }
 
-        $plan = db()->where('plan_id', $this->plan_id)->getOne('plans', ['plan_id', 'name']);
+        $plan = db()->where('plan_id', $this->plan_id)->getOne('plans', ['plan_id', 'name', 'settings']);
+
+        $is_auto_activated = !empty($parsed_payment['is_valid']);
+        $payment_status = $is_auto_activated ? 1 : 0;
 
         /* Insert the payment record into the database */
         $payment_id = db()->insert('payments', [
@@ -942,7 +1097,7 @@ class Pay extends Controller {
             'discount_amount' => $discount_amount,
             'base_amount' => $base_amount,
             'email' => $this->user->email,
-            'payment_id' => $payment_unique_id,
+            'payment_id' => $external_payment_id,
             'name' => $this->user->name,
             'plan' => json_encode($plan),
             'billing' => settings()->payment->taxes_and_billing_is_enabled && $this->user->billing ? json_encode($this->user->billing) : null,
@@ -951,12 +1106,104 @@ class Pay extends Controller {
             'total_amount' => $formatted_price,
             'currency' => currency(),
             'payment_proof' => $offline_payment_proof_file,
-            'status' => 'pending',
-            'datetime' => get_date()
+            'status' => $payment_status,
+            'datetime' => $payment_datetime
         ]);
+
+        /* Process automatic account activation if valid payment info was extracted */
+        if($is_auto_activated) {
+            $current_plan_expiration_date = $this->plan_id == $this->user->plan_id ? $this->user->plan_expiration_date : '';
+            $subscription_model = new \Altum\Models\Subscription();
+            $renewal_period = $subscription_model->calculate_renewal_period($current_plan_expiration_date, $_POST['payment_frequency'], $payment_datetime);
+            $plan_expiration_date = $renewal_period['period_end'];
+
+            /* Update user record with active plan */
+            db()->where('user_id', $this->user->user_id)->update('users', [
+                'plan_id' => $this->plan_id,
+                'plan_settings' => json_encode($plan->settings),
+                'plan_expiration_date' => $plan_expiration_date,
+                'plan_expiry_reminder' => 0,
+                'plan_trial_done' => 1,
+                'payment_processor' => 'offline_payment',
+                'payment_total_amount' => $formatted_price,
+                'payment_currency' => currency(),
+            ]);
+
+            /* Clear user cache */
+            cache()->deleteItemsByTag('user_id=' . $this->user->user_id);
+
+            /* Sync subscription and generate paid invoice */
+            try {
+                $subscription_model->sync_from_successful_payment([
+                    'local_payment_id' => $payment_id,
+                    'external_payment_id' => $external_payment_id,
+                    'payment_processor' => 'offline_payment',
+                    'payment_total' => $formatted_price,
+                    'total_amount_default_currency' => $formatted_price,
+                    'payment_currency' => currency(),
+                    'user_id' => $this->user->user_id,
+                    'plan_id' => $this->plan_id,
+                    'plan_name' => $plan->name,
+                    'payment_frequency' => $_POST['payment_frequency'],
+                    'code' => $code ?: null,
+                    'discount_amount' => $discount_amount,
+                    'base_amount' => $base_amount,
+                    'taxes_ids' => !empty($this->applied_taxes_ids) ? json_encode($this->applied_taxes_ids) : null,
+                    'payment_type' => $_POST['payment_type'],
+                    'payment_subscription_id' => null,
+                    'payment_datetime' => $payment_datetime,
+                    'period_start' => $renewal_period['period_start'],
+                    'period_end' => $plan_expiration_date,
+                    'billing' => settings()->payment->taxes_and_billing_is_enabled && $this->user->billing ? json_encode($this->user->billing) : null,
+                    'business' => json_encode(settings()->business),
+                ]);
+            } catch(\Exception $exception) {
+                if(DEBUG) error_log($exception->getMessage());
+            }
+
+            /* Update proforma invoice if paying for an existing proforma */
+            $proforma_invoice_id = isset($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null;
+            if($proforma_invoice_id) {
+                db()->where('invoice_id', $proforma_invoice_id)->update('invoices', [
+                    'status' => 'paid',
+                    'paid_datetime' => $payment_datetime,
+                    'payment_id' => $payment_id,
+                ]);
+            }
+
+            /* Send user confirmation email */
+            $email_template = get_email_template(
+                [],
+                l('global.emails.user_payment.subject'),
+                [
+                    '{{NAME}}' => $this->user->name,
+                    '{{PLAN_NAME}}' => $plan->name,
+                    '{{PLAN_EXPIRATION_DATE}}' => \Altum\Date::get($plan_expiration_date, 2),
+                    '{{USER_PLAN_LINK}}' => url('account-plan'),
+                    '{{USER_PAYMENTS_LINK}}' => url('account-payments'),
+                ],
+                l('global.emails.user_payment.body')
+            );
+            send_mail($this->user->email, $email_template->subject, $email_template->body, ['anti_phishing_code' => $this->user->anti_phishing_code, 'language' => $this->user->language]);
+
+            /* Check affiliate */
+            (new \Altum\Models\Payments())->affiliate_payment_check($payment_id, $formatted_price, settings()->payment->default_currency, $this->user);
+
+            /* Set friendly success message */
+            Alerts::add_success(sprintf(
+                'Payment verified! Confirmation code %s verified (Paid on %s). Your %s plan has been activated automatically until %s.',
+                $external_payment_id,
+                \Altum\Date::get($payment_datetime, 2),
+                $plan->name,
+                \Altum\Date::get($plan_expiration_date, 2)
+            ));
+        }
 
         /* Send admin notification if enabled */
         if(settings()->email_notifications->new_payment && !empty(settings()->email_notifications->emails)) {
+            $payment_status_label = $is_auto_activated 
+                ? (l('account_payments.status_approved') . ' (Auto-activated via confirmation message: ' . $external_payment_id . ')')
+                : l('account_payments.status_pending');
 
             $email_template = get_email_template(
                 [
@@ -975,13 +1222,13 @@ class Pay extends Controller {
                     '{{PAYMENT_FREQUENCY}}' => l('plan.custom_plan.' . $_POST['payment_frequency']),
                     '{{PAYMENT_TYPE}}' => l('pay.custom_plan.' . $_POST['payment_type'] . '_type'),
                     '{{PAYMENT_ID}}' => $payment_id,
-                    '{{EXTERNAL_PAYMENT_ID}}' => $payment_unique_id,
+                    '{{EXTERNAL_PAYMENT_ID}}' => $external_payment_id,
                     '{{PAYMENT_LINK}}' => url('admin/payments?id=' . $payment_id),
-                    '{{DATE}}' => get_date(),
+                    '{{DATE}}' => $payment_datetime,
                     '{{DATE_TIMEZONE}}' => \Altum\Date::$default_timezone,
                     '{{CODE}}' => $code ?: l('global.none'),
                     '{{DISCOUNT_AMOUNT}}' => $discount_amount,
-                    '{{PAYMENT_STATUS}}' => l('account_payments.status.pending'),
+                    '{{PAYMENT_STATUS}}' => $payment_status_label,
                 ],
                 l('global.emails.admin_new_payment_notification.body')
             );
@@ -993,8 +1240,12 @@ class Pay extends Controller {
             );
         }
 
-        /* Redirect to the thank you page after offline payment submission */
-        redirect('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount));
+        if($is_auto_activated) {
+            redirect('account-plan');
+        } else {
+            /* Redirect to the thank you page after offline payment submission */
+            redirect('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount));
+        }
     }
 
     private function payu() {

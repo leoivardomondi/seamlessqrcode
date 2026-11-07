@@ -121,6 +121,9 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
             <input type="hidden" name="annual_price" value="<?= $data->plan->prices->annual->{currency()} ?>" />
             <input type="hidden" name="lifetime_price" value="<?= $data->plan->prices->lifetime->{currency()} ?>" />
             <input type="hidden" name="token" value="<?= \Altum\Csrf::get() ?>" />
+            <?php if(isset($_GET['invoice_id']) || isset($_POST['invoice_id'])): ?>
+                <input type="hidden" name="invoice_id" value="<?= (int) ($_GET['invoice_id'] ?? $_POST['invoice_id']) ?>" />
+            <?php endif ?>
 
             <div class="row">
                 <div class="col-12 col-xl-8">
@@ -409,7 +412,21 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
                             </div>
 
                             <div class="form-group mt-4">
-                                <label><?= l('pay.custom_plan.offline_payment_proof') ?></label>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="offline_payment_proof_text" class="mb-0 font-weight-bold">
+                                        <i class="fas fa-fw fa-sm fa-sms text-primary mr-1"></i> <?= l('pay.custom_plan.offline_payment_proof_text') ?? 'Payment Confirmation Message (SMS / Transaction Details)' ?>
+                                    </label>
+                                    <span class="badge badge-success text-white small px-2 py-1"><i class="fas fa-bolt mr-1"></i> Auto-Activation</span>
+                                </div>
+                                <textarea id="offline_payment_proof_text" name="offline_payment_proof_text" class="form-control" rows="3" placeholder="Paste your M-PESA or bank confirmation message here (e.g. QK81ABC123 Confirmed. Ksh1,700.00 sent to ... on 7/11/26 at 6:45 PM)..."></textarea>
+                                <div id="offline_payment_detected_badge" class="mt-2" style="display: none;"></div>
+                                <small class="form-text text-muted">Paste your confirmation message above: the payment date and reference will be extracted, and your account will be activated automatically.</small>
+                            </div>
+
+                            <div class="form-group mt-4">
+                                <label for="offline_payment_proof" class="font-weight-bold">
+                                    <i class="fas fa-fw fa-sm fa-file-image text-primary mr-1"></i> <?= l('pay.custom_plan.offline_payment_proof') ?> <span class="text-muted font-weight-normal small">(Optional if confirmation message is pasted above)</span>
+                                </label>
                                 <input id="offline_payment_proof" type="file" name="offline_payment_proof" accept="<?= \Altum\Uploads::get_whitelisted_file_extensions_accept('offline_payment_proofs') ?>" class="form-control-file altum-file-input" />
                                 <small class="form-text text-muted"><?= sprintf(l('global.accessibility.whitelisted_file_extensions'), \Altum\Uploads::get_whitelisted_file_extensions_accept('offline_payment_proofs'))  . ' ' . sprintf(l('global.accessibility.file_size_limit'), settings()->offline_payment->proof_size_limit) ?></small>
                             </div>
@@ -1256,6 +1273,54 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
     };
 
     init_checkout();
+
+    /* Offline payment confirmation parser */
+    let parse_confirmation_sms = (text) => {
+        let result = { code: null, amount: null, date: null, time: null };
+        if(!text) return result;
+
+        let code_match = text.match(/\b([A-Z0-9]{10})\s+Confirmed/i) 
+            || text.match(/(?:Trans(?:action)?\s*(?:ID|Id|id|No|Ref)?|Ref(?:erence)?)\s*[:#.]?\s*([A-Z0-9]{6,20})/i)
+            || text.match(/\b([A-Z]{2}[0-9A-Z]{8})\b/i);
+        if(code_match) result.code = code_match[1].toUpperCase();
+
+        let amount_match = text.match(/(?:Ksh|KES|\$|USD)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i)
+            || text.match(/(?:sent|paid|received|transferred)\s*(?:to|from)?\s*(?:Ksh|KES|\$)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/i);
+        if(amount_match) result.amount = amount_match[1];
+
+        let date_match = text.match(/(?:on|On|dated|date:?)\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})(?:\s+at|\s*,|\s+)\s*(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i)
+            || text.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\s+at\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i);
+        if(date_match) {
+            result.date = date_match[1];
+            result.time = date_match[2];
+        } else {
+            let date_only = text.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i);
+            if(date_only) result.date = date_only[1];
+        }
+
+        return result;
+    };
+
+    $('#offline_payment_proof_text').on('input paste change', function() {
+        let val = $(this).val();
+        let parsed = parse_confirmation_sms(val);
+        let badge = $('#offline_payment_detected_badge');
+
+        if(parsed.code || parsed.date || parsed.amount) {
+            let html = '<div class="alert alert-success py-2 px-3 small d-flex flex-wrap align-items-center mb-0">';
+            html += '<span class="font-weight-bold mr-2"><i class="fas fa-check-circle mr-1"></i> Payment Info Detected:</span>';
+            if(parsed.code) html += '<span class="badge badge-light mr-2 mb-1">Ref: ' + parsed.code + '</span>';
+            if(parsed.amount) html += '<span class="badge badge-light mr-2 mb-1">Amount: ' + parsed.amount + '</span>';
+            if(parsed.date) html += '<span class="badge badge-light mr-2 mb-1">Paid on: ' + parsed.date + (parsed.time ? ' ' + parsed.time : '') + '</span>';
+            if(parsed.code && parsed.date) {
+                html += '<span class="text-success font-weight-bold ml-auto mb-1"><i class="fas fa-bolt"></i> Ready for automatic activation!</span>';
+            }
+            html += '</div>';
+            badge.html(html).slideDown();
+        } else {
+            badge.slideUp().html('');
+        }
+    });
 </script>
 
 <?php if($data->payment_extra_data && $data->payment_extra_data['payment_processor'] == 'paddle'): ?>
