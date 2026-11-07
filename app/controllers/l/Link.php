@@ -125,6 +125,7 @@ class Link extends Controller {
             $splash_pages = (new \Altum\Models\SplashPages())->get_splash_pages_by_user_id($this->user->user_id);
             $splash_page = $splash_pages[$this->link->splash_page_id] ?? null;
         }
+        $this->splash_page = $splash_page;
 
         $always_show = !empty($splash_page->settings->always_show);
         $is_cookie_unlocked = ($_COOKIE['link_unlocked_' . $this->link->link_id] ?? null) === md5($this->link->link_id . $this->link->link_id);
@@ -147,14 +148,106 @@ class Link extends Controller {
                 'splash_page' => $splash_page,
             ];
 
-            /* Set a custom title */
-            Title::set(l('link.splash.title'));
+            /* Determine page title: priority given to SEO title, then splash page title/name, then biolink blocks, then link url */
+            $page_title = null;
+            $is_full_title = false;
 
-            /* Meta */
-            if($splash_page->settings->opengraph) {
-                Meta::set_description(string_truncate($splash_page->description, 160));
-                Meta::set_social_url(url(\Altum\Router::$original_request));
-                Meta::set_social_image(\Altum\Uploads::get_full_url('splash_pages') . $splash_page->settings->opengraph);
+            if(!empty($this->link->settings->seo->title)) {
+                $page_title = $this->link->settings->seo->title;
+                $is_full_title = true;
+            } else if($splash_page && !empty($splash_page->title)) {
+                $page_title = $splash_page->title;
+            } else if($splash_page && !empty($splash_page->name)) {
+                $page_title = $splash_page->name;
+            } else {
+                /* If it's a biolink, attempt to find a title from avatar/header/heading blocks */
+                if($this->link->type == 'biolink') {
+                    $biolink_header_block = db()->where('link_id', $this->link->link_id)->where('type', ['header', 'heading', 'avatar'], 'IN')->where('is_enabled', 1)->orderBy('order', 'ASC')->getOne('biolinks_blocks');
+                    if($biolink_header_block) {
+                        $bh_settings = json_decode($biolink_header_block->settings ?? '');
+                        if(!empty($bh_settings->title)) {
+                            $page_title = $bh_settings->title;
+                        } else if(!empty($bh_settings->text)) {
+                            $page_title = $bh_settings->text;
+                        } else if(!empty($bh_settings->name)) {
+                            $page_title = $bh_settings->name;
+                        }
+                    }
+                }
+
+                if(!$page_title) {
+                    $page_title = ucwords(str_replace(['-', '_'], ' ', $this->link->url));
+                }
+            }
+
+            /* Set title and OpenGraph / Twitter social title */
+            Title::set($page_title, $is_full_title);
+            Meta::set_social_title($page_title);
+
+            /* Meta description */
+            $page_description = null;
+            if(!empty($this->link->settings->seo->meta_description)) {
+                $page_description = string_truncate($this->link->settings->seo->meta_description, 160);
+            } else if($splash_page && !empty($splash_page->description)) {
+                $page_description = string_truncate($splash_page->description, 160);
+            } else if($splash_page && !empty($splash_page->settings->form_title)) {
+                $page_description = string_truncate($splash_page->settings->form_title, 160);
+            } else if($splash_page && !empty($splash_page->title)) {
+                $page_description = string_truncate($splash_page->title, 160);
+            }
+
+            if($page_description) {
+                Meta::set_description($page_description);
+                Meta::set_social_description($page_description);
+            }
+
+            if(!empty($this->link->settings->seo->meta_keywords)) {
+                Meta::set_keywords(string_truncate($this->link->settings->seo->meta_keywords, 160));
+            }
+
+            Meta::set_social_url($this->link->full_url);
+            Meta::set_canonical_url($this->link->full_url);
+
+            /* Determine social preview image (OpenGraph / Twitter) */
+            $social_image = null;
+
+            if($splash_page && !empty($splash_page->settings->opengraph)) {
+                $social_image = \Altum\Uploads::get_full_url('splash_pages') . $splash_page->settings->opengraph;
+            } else if(!empty($this->link->settings->seo->image)) {
+                $social_image = \Altum\Uploads::get_full_url('block_images') . $this->link->settings->seo->image;
+            } else if($splash_page && !empty($splash_page->settings->logo)) {
+                $social_image = \Altum\Uploads::get_full_url('splash_pages') . $splash_page->settings->logo;
+            } else if($this->link->type == 'biolink') {
+                /* Check avatar block or image block in biolink */
+                $avatar_block = db()->where('link_id', $this->link->link_id)->where('type', 'avatar')->where('is_enabled', 1)->orderBy('order', 'ASC')->getOne('biolinks_blocks');
+                if($avatar_block) {
+                    $av_settings = json_decode($avatar_block->settings ?? '');
+                    if(!empty($av_settings->image)) {
+                        $social_image = \Altum\Uploads::get_full_url('avatars') . $av_settings->image;
+                    }
+                }
+
+                if(!$social_image) {
+                    $img_block = db()->where('link_id', $this->link->link_id)->where('type', 'image')->where('is_enabled', 1)->orderBy('order', 'ASC')->getOne('biolinks_blocks');
+                    if($img_block) {
+                        $img_settings = json_decode($img_block->settings ?? '');
+                        if(!empty($img_settings->image)) {
+                            $social_image = \Altum\Uploads::get_full_url('block_images') . $img_settings->image;
+                        }
+                    }
+                }
+            }
+
+            if(!$social_image && $splash_page && !empty($splash_page->settings->favicon)) {
+                $social_image = \Altum\Uploads::get_full_url('splash_pages') . $splash_page->settings->favicon;
+            }
+
+            if(!$social_image && !empty($this->link->settings->favicon)) {
+                $social_image = \Altum\Uploads::get_full_url('favicons') . $this->link->settings->favicon;
+            }
+
+            if($social_image) {
+                Meta::set_social_image($social_image);
             }
 
             /* Prepare the view */
@@ -509,6 +602,72 @@ class Link extends Controller {
             Meta::set_social_title($this->link->settings->seo->title);
             Meta::set_social_description(string_truncate($this->link->settings->seo->meta_description, 160));
             if(!empty($this->link->settings->seo->image)) Meta::set_social_image(\Altum\Uploads::get_full_url('block_images') . $this->link->settings->seo->image);
+        }
+
+        /* Fallback title for biolink if not explicitly set in SEO */
+        if(empty($this->link->settings->seo->title)) {
+            $biolink_fallback_title = null;
+            if(!empty($this->splash_page->title)) {
+                $biolink_fallback_title = $this->splash_page->title;
+            } else if(!empty($this->splash_page->name)) {
+                $biolink_fallback_title = $this->splash_page->name;
+            } else {
+                foreach($biolink_blocks as $block) {
+                    if($block->type == 'header' && !empty($block->settings->title)) {
+                        $biolink_fallback_title = $block->settings->title;
+                        break;
+                    } else if($block->type == 'heading' && !empty($block->settings->text)) {
+                        $biolink_fallback_title = $block->settings->text;
+                        break;
+                    } else if($block->type == 'avatar' && !empty($block->settings->name)) {
+                        $biolink_fallback_title = $block->settings->name;
+                        break;
+                    }
+                }
+            }
+
+            if($biolink_fallback_title) {
+                Title::set($biolink_fallback_title, true);
+                Meta::set_social_title($biolink_fallback_title);
+            }
+        }
+
+        /* Fallback social preview image for biolink if not explicitly set in SEO */
+        if(empty($this->link->settings->seo->image)) {
+            $biolink_social_image = null;
+
+            if(!empty($this->splash_page->settings->opengraph)) {
+                $biolink_social_image = \Altum\Uploads::get_full_url('splash_pages') . $this->splash_page->settings->opengraph;
+            } else if(!empty($this->splash_page->settings->logo)) {
+                $biolink_social_image = \Altum\Uploads::get_full_url('splash_pages') . $this->splash_page->settings->logo;
+            } else {
+                foreach($biolink_blocks as $block) {
+                    if($block->type == 'avatar' && !empty($block->settings->image)) {
+                        $biolink_social_image = \Altum\Uploads::get_full_url('avatars') . $block->settings->image;
+                        break;
+                    }
+                }
+                if(!$biolink_social_image) {
+                    foreach($biolink_blocks as $block) {
+                        if($block->type == 'image' && !empty($block->settings->image)) {
+                            $biolink_social_image = \Altum\Uploads::get_full_url('block_images') . $block->settings->image;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if(!$biolink_social_image && !empty($this->splash_page->settings->favicon)) {
+                $biolink_social_image = \Altum\Uploads::get_full_url('splash_pages') . $this->splash_page->settings->favicon;
+            }
+
+            if(!$biolink_social_image && !empty($this->link->settings->favicon)) {
+                $biolink_social_image = \Altum\Uploads::get_full_url('favicons') . $this->link->settings->favicon;
+            }
+
+            if($biolink_social_image) {
+                Meta::set_social_image($biolink_social_image);
+            }
         }
 
         if(count($this->link->pixels_ids)) {

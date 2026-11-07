@@ -16,6 +16,10 @@
 
         <?php \Altum\Meta::output() ?>
 
+        <?php if(\Altum\Meta::$canonical): ?>
+            <link rel="canonical" href="<?= \Altum\Meta::$canonical ?>" />
+        <?php endif ?>
+
         <?php
         /* Block search engine indexing if the user wants, and if the system viewing links (for preview) are used */
         if($this->link->settings->seo->block ?? null || \Altum\Router::$original_request == 'l/link'):
