@@ -32,8 +32,21 @@ $format_money = function($amount) use ($data) {
     return nr($amount, 2) . ' ' . $data->invoice->currency;
 };
 
-$payment_processor = $data->subscription->processor ?: 'offline_payment';
-$payment_method_label = l('pay.custom_plan.' . $payment_processor, $language, true) ?? ucwords(str_replace('_', ' ', $payment_processor));
+/* Determine payment processor & method label without defaulting to offline */
+$is_online_payment = !empty($data->pay_now_url) && !empty($data->pay_now_processor) && $data->pay_now_processor != 'offline_payment';
+
+$payment_processor = $is_online_payment
+    ? $data->pay_now_processor
+    : ($data->subscription->processor && $data->subscription->processor != 'offline_payment' ? $data->subscription->processor : ($data->pay_now_processor ?: 'offline_payment'));
+
+if(!empty($data->pay_now_processor_label)) {
+    $payment_method_label = $data->pay_now_processor_label;
+} else if($payment_processor == 'paystack') {
+    $payment_method_label = l('pay.custom_plan.paystack', $language, true) ?: 'M-PESA/AIRTEL MONEY/CARD';
+} else {
+    $payment_method_label = l('pay.custom_plan.' . $payment_processor, $language, true) ?? ucwords(str_replace('_', ' ', $payment_processor));
+}
+
 $offline_payment_instructions = trim(settings()->offline_payment->instructions ?? '');
 ?>
 
@@ -50,7 +63,6 @@ $offline_payment_instructions = trim(settings()->offline_payment->instructions ?
 </p>
 
 <p style="font-size: 14px; line-height: 1.5; margin: 0 0 14px;">
-    <strong><?= e($payment_method_label) ?></strong><br />
     Account Number <strong><?= e($data->invoice->invoice_number) ?></strong><br />
     Amount <strong><?= e($format_money($data->invoice->total_amount)) ?></strong>
 </p>
@@ -65,15 +77,20 @@ $offline_payment_instructions = trim(settings()->offline_payment->instructions ?
         <tbody>
         <tr>
             <td align="left">
-                <a href="<?= $data->pay_now_url ?>" style="background-color: <?= settings()->smtp->button_background_color ?? '#1b1b1b' ?>; border-radius: <?= settings()->smtp->button_border_radius ?? '10' ?>px; color: <?= settings()->smtp->button_text_color ?? '#ffffff' ?>; display: inline-block; font-size: 15px; font-weight: 700; line-height: 1.2; padding: 12px 18px; text-decoration: none;">
+                <a href="<?= $data->pay_now_url ?>" style="background-color: <?= settings()->smtp->button_background_color ?? '#1b1b1b' ?>; border-radius: <?= settings()->smtp->button_border_radius ?? '10' ?>px; color: <?= settings()->smtp->button_text_color ?? '#ffffff' ?>; display: inline-block; font-size: 15px; font-weight: 700; line-height: 1.2; padding: 12px 22px; text-decoration: none;">
                     Pay now
                 </a>
             </td>
         </tr>
-        <?php if(!empty($data->pay_now_processor_label)): ?>
+        <tr>
+            <td style="font-size: 13px; line-height: 1.5; padding-top: 10px; word-break: break-all; color: #4b5563;">
+                Direct payment link: <a href="<?= $data->pay_now_url ?>" style="color: <?= settings()->smtp->button_background_color ?? '#15c' ?>; font-weight: 600;"><?= $data->pay_now_url ?></a>
+            </td>
+        </tr>
+        <?php if(!empty($payment_method_label)): ?>
             <tr>
-                <td style="color: #64748b; font-size: 13px; line-height: 1.5; padding-top: 8px;">
-                    Recommended payment method: <?= e($data->pay_now_processor_label) ?>
+                <td style="color: #64748b; font-size: 13px; line-height: 1.5; padding-top: 6px;">
+                    Recommended payment method: <strong><?= e($payment_method_label) ?></strong>
                 </td>
             </tr>
         <?php endif ?>
@@ -134,7 +151,11 @@ $offline_payment_instructions = trim(settings()->offline_payment->instructions ?
 
 <h3 style="font-size: 17px; line-height: 1.35; margin: 0 0 12px; font-weight: 700;">How to confirm payment?</h3>
 
-<?php if($offline_payment_instructions): ?>
+<?php if($is_online_payment): ?>
+    <p style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
+        Click the <strong>Pay now</strong> button above or open the direct payment link to complete payment instantly via <strong><?= e($payment_method_label) ?></strong>. Once completed, your subscription and plan will be renewed automatically without requiring any manual confirmation.
+    </p>
+<?php elseif($offline_payment_instructions): ?>
     <div style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
         <?= nl2br($offline_payment_instructions) ?>
     </div>

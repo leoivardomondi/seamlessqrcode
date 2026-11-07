@@ -150,9 +150,42 @@ class Invoice extends Controller {
 
         Title::set(sprintf(l('invoice.title'), $payment->business->invoice_nr_prefix . $payment->invoice_number));
 
+        /* Generate ready payment link if unpaid proforma invoice */
+        $pay_now_url = null;
+        if($payment->status != 'paid' && !empty($invoice->plan_id)) {
+            $subscription = $invoice->subscription_id ? db()->where('subscription_id', $invoice->subscription_id)->getOne('subscriptions') : null;
+            if(!$subscription) {
+                $subscription = (object) [
+                    'subscription_id' => 0,
+                    'plan_id' => $invoice->plan_id,
+                    'frequency' => $invoice->frequency ?: 'monthly',
+                    'currency' => $invoice->currency,
+                    'processor' => $invoice->processor,
+                    'user_email' => $this->user->email,
+                    'user_name' => $this->user->name,
+                    'user_billing' => $this->user->billing,
+                    'user_country' => $this->user->country,
+                    'user_language' => $this->user->language,
+                ];
+            } else {
+                $subscription->user_email = $this->user->email;
+                $subscription->user_name = $this->user->name;
+                $subscription->user_billing = $this->user->billing;
+                $subscription->user_country = $this->user->country;
+                $subscription->user_language = $this->user->language;
+            }
+
+            $plan = (new \Altum\Models\Plan())->get_plan_by_id($invoice->plan_id);
+            if($plan) {
+                $payment_link = (new \Altum\Models\Subscription())->get_proforma_payment_link($subscription, $invoice->invoice_id, $plan, $invoice->total_amount, $invoice->currency);
+                $pay_now_url = $payment_link['url'] ?? null;
+            }
+        }
+
         $data = [
             'payment' => $payment,
-            'payment_taxes' => $payment_taxes
+            'payment_taxes' => $payment_taxes,
+            'pay_now_url' => $pay_now_url,
         ];
 
         $view = new \Altum\View('invoice/index', (array) $this);

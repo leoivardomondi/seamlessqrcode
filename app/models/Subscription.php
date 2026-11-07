@@ -615,6 +615,8 @@ class Subscription extends Model {
                 `users`.`email` AS `user_email`,
                 `users`.`name` AS `user_name`,
                 `users`.`billing` AS `user_billing`,
+                `users`.`country` AS `user_country`,
+                `users`.`city` AS `user_city`,
                 `users`.`language` AS `user_language`,
                 `users`.`anti_phishing_code` AS `user_anti_phishing_code`
             FROM
@@ -812,7 +814,7 @@ class Subscription extends Model {
         }
     }
 
-    private function get_proforma_payment_link($subscription, $invoice_id, $plan, $amount, $currency) {
+    public function get_proforma_payment_link($subscription, $invoice_id, $plan, $amount, $currency) {
         if(!settings()->payment->is_enabled || (float) $amount <= 0) {
             return [
                 'url' => url('invoice/proforma/' . $invoice_id),
@@ -831,11 +833,22 @@ class Subscription extends Model {
             ];
         }
 
-        $processor = $this->get_best_proforma_payment_processor($currency, $amount, $subscription->processor ?? null);
-        $processor_label = $processor ? (l('pay.custom_plan.' . $processor, $subscription->user_language ?? null, true) ?? ucwords(str_replace('_', ' ', $processor))) : null;
+        $processor = $this->get_best_proforma_payment_processor($currency, $amount, $subscription->processor ?? null, $subscription);
+
+        $processor_label = null;
+        if($processor) {
+            if($processor == 'paystack') {
+                $processor_label = l('pay.custom_plan.paystack', $subscription->user_language ?? null, true) ?: 'M-PESA/AIRTEL MONEY/CARD';
+            } else {
+                $processor_label = l('pay.custom_plan.' . $processor, $subscription->user_language ?? null, true) ?? ucwords(str_replace('_', ' ', $processor));
+            }
+        }
+
+        /* Ensure payment_type is always one_time for monthly or yearly renewal */
+        $frequency = in_array($subscription->frequency, ['monthly', 'quarterly', 'biannual', 'annual', 'lifetime']) ? $subscription->frequency : 'monthly';
 
         $query = [
-            'payment_frequency' => $subscription->frequency,
+            'payment_frequency' => $frequency,
             'payment_type' => 'one_time',
             'currency' => $currency,
             'invoice_id' => (int) $invoice_id,
@@ -852,7 +865,7 @@ class Subscription extends Model {
         ];
     }
 
-    private function get_best_proforma_payment_processor($currency, $amount, $current_processor = null) {
+    public function get_best_proforma_payment_processor($currency, $amount, $current_processor = null, $subscription = null) {
         if((float) $amount <= 0) {
             return null;
         }
@@ -867,7 +880,24 @@ class Subscription extends Model {
                 && in_array('one_time', $payment_processors[$processor]['payment_type']);
         };
 
+        /* Detect if user or transaction is in Kenya */
+        $user_billing = $subscription && !empty($subscription->user_billing) ? (is_string($subscription->user_billing) ? json_decode($subscription->user_billing) : (object) $subscription->user_billing) : null;
+        $is_kenya = (
+            strtoupper($currency ?? '') === 'KES'
+            || strtoupper($user_billing->country ?? '') === 'KE'
+            || strtolower($user_billing->country ?? '') === 'kenya'
+            || strtoupper($subscription->user_country ?? '') === 'KE'
+            || strtolower($subscription->user_country ?? '') === 'kenya'
+        );
+
         $preferred_processors = [];
+
+        /* If in Kenya or paying in KES, Paystack MUST be the priority processor */
+        if($is_kenya) {
+            $preferred_processors[] = 'paystack';
+            $preferred_processors[] = 'flutterwave';
+        }
+
         $currency_settings = settings()->payment->currencies->{$currency} ?? null;
 
         if(!empty($currency_settings->default_payment_processor)) {
@@ -887,14 +917,14 @@ class Subscription extends Model {
             $preferred_processors[] = $current_processor;
         }
 
-        $preferred_processors[] = 'offline_payment';
-
+        /* Check all preferred online processors first */
         foreach(array_unique($preferred_processors) as $processor) {
-            if($is_available($processor)) {
+            if($processor != 'offline_payment' && $is_available($processor)) {
                 return $processor;
             }
         }
 
+        /* Check all remaining online processors */
         foreach(array_keys($payment_processors) as $processor) {
             if($processor == 'offline_payment') {
                 continue;
@@ -905,6 +935,7 @@ class Subscription extends Model {
             }
         }
 
+        /* Fallback to offline payment only if no online processor is available */
         return $is_available('offline_payment') ? 'offline_payment' : null;
     }
 

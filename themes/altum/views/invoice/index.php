@@ -100,6 +100,9 @@ if(!empty($data->payment->period_start) && !empty($data->payment->period_end)) {
                 <?php endif ?>
             </div>
             <div class="d-flex align-items-center mt-2 mt-md-0">
+                <?php if($is_proforma_invoice && !$is_payment_paid && !empty($data->pay_now_url)): ?>
+                    <a href="<?= $data->pay_now_url ?>" class="btn btn-success mr-2"><i class="fas fa-fw fa-sm fa-credit-card mr-1"></i> Pay now</a>
+                <?php endif ?>
                 <a href="<?= url('account') ?>" target="_blank" class="btn btn-outline-info mr-2"><i class="fas fa-fw fa-sm fa-id-card mr-1"></i> <?= l('account_billing.header') ?? 'Billing Details' ?></a>
                 <a href="<?= $download_invoice_url ?>" class="btn btn-primary mr-2"><i class="fas fa-fw fa-sm fa-download mr-1"></i> <?= l('invoice.download_pdf') ?></a>
                 <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="fas fa-fw fa-sm fa-print mr-1"></i> <?= l('invoice.print') ?></button>
