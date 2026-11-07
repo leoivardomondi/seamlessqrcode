@@ -73,13 +73,49 @@ class User extends Model {
             db()->where('user_id', $user->user_id)->update('users', [
                 'plan_id' => 'free',
                 'plan_settings' => json_encode(settings()->plan_free->settings),
-                'payment_subscription_id' => ''
+                'payment_subscription_id' => '',
+                'plan_trial_done' => 1,
             ]);
+
+            $user->plan_trial_done = 1;
 
             /* Clear the cache */
             cache()->deleteItemsByTag('user_id=' . $user->user_id);
         }
 
+    }
+
+    /* Enforce that deactivated users or users with prior subscriptions/payments do not have trial option */
+    public function check_and_enforce_trial_eligibility($user) {
+        if(!$user) {
+            return false;
+        }
+
+        if(!empty($user->plan_trial_done)) {
+            return false;
+        }
+
+        $user_id = (int) $user->user_id;
+
+        $is_deactivated = (int) ($user->status ?? 1) !== 1;
+        $has_expired_plan = $user->plan_id == 'free' && !empty($user->plan_expiration_date) && strtotime($user->plan_expiration_date) < time() && strtotime($user->plan_expiration_date) > 0;
+        
+        $has_past_payment = false;
+        $has_past_subscription = false;
+
+        if(!$is_deactivated && !$has_expired_plan) {
+            $has_past_payment = db()->where('user_id', $user_id)->has('payments');
+            $has_past_subscription = db()->where('user_id', $user_id)->where('status', ['canceled', 'expired', 'past_due'], 'IN')->has('subscriptions');
+        }
+
+        if($is_deactivated || $has_expired_plan || $has_past_payment || $has_past_subscription) {
+            $user->plan_trial_done = 1;
+            db()->where('user_id', $user_id)->update('users', ['plan_trial_done' => 1]);
+            cache()->deleteItemsByTag('user_id=' . $user_id);
+            return false;
+        }
+
+        return true;
     }
 
     public function delete($user_id) {
@@ -402,7 +438,7 @@ class User extends Model {
         }
 
         /* Database query */
-        db()->where('user_id', $user->user_id)->update('users', ['payment_subscription_id' => '']);
+        db()->where('user_id', $user->user_id)->update('users', ['payment_subscription_id' => '', 'plan_trial_done' => 1]);
 
         try {
             $subscription_model = new Subscription();

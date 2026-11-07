@@ -45,6 +45,8 @@ class Pay extends Controller {
             throw_404();
         }
 
+        (new \Altum\Models\User())->check_and_enforce_trial_eligibility($this->user);
+
         $payment_processors = require APP_PATH . 'includes/payment_processors.php';
 
         if(isset($_GET['currency'])) {

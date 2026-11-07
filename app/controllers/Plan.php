@@ -31,6 +31,8 @@ class Plan extends Controller {
 
         /* New users must complete the phone and industry setup before seeing plans. */
         if(is_logged_in()) {
+            (new \Altum\Models\User())->check_and_enforce_trial_eligibility($this->user);
+
             $user_extra = json_decode($this->user->extra ?? '') ?: (object) [];
             $user_phone = preg_replace('/\D+/', '', (string) ($this->user->billing->phone ?? ''));
 

@@ -348,6 +348,11 @@ class AdminApiUsers extends Controller {
         $plan_expiration_date = isset($_POST['plan_expiration_date']) ? (new \DateTime($_POST['plan_expiration_date']))->format('Y-m-d H:i:s') : $user->plan_expiration_date;
         $plan_trial_done = isset($_POST['plan_trial_done']) ? (int) $_POST['plan_trial_done'] : $user->plan_trial_done;
 
+        /* Deactivated users should by default not have trial option */
+        if((int) $status === 0) {
+            $plan_trial_done = 1;
+        }
+
         /* Update the basic user settings */
         db()->where('user_id', $user->user_id)->update('users', [
             'name' => $name,

@@ -137,11 +137,12 @@ class Cron extends Controller {
         /* Go through each result */
         while($user = $result->fetch_object()) {
 
-            /* Switch the user to the default plan */
+            /* Switch the user to the default plan and ensure expired plan users cannot take trials */
             db()->where('user_id', $user->user_id)->update('users', [
                 'plan_id' => 'free',
                 'plan_settings' => json_encode(settings()->plan_free->settings),
-                'payment_subscription_id' => ''
+                'payment_subscription_id' => '',
+                'plan_trial_done' => 1,
             ]);
 
             /* Prepare the email */

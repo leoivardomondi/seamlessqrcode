@@ -46,6 +46,11 @@ class AdminUserUpdate extends Controller {
             $_POST['type'] = isset($_POST['type']) && in_array((int) $_POST['type'], [0, 1, 2]) ? (int) $_POST['type'] : 0;
             $_POST['plan_trial_done'] = (int) isset($_POST['plan_trial_done']);
 
+            /* Deactivated users should by default not have trial option */
+            if($_POST['status'] == 0) {
+                $_POST['plan_trial_done'] = 1;
+            }
+
             if(\Altum\Plugin::is_active('affiliate')) {
                 $_POST['referred_by'] = !empty($_POST['referred_by']) ? (int) $_POST['referred_by'] : null;
             }
