@@ -554,7 +554,7 @@ return [
 	'pay.custom_plan.subheader' => 'Ești aproape acolo, completează formularul următor și finalizează comanda.',
 	'pay.custom_plan.paypal' => 'PayPal',
 	'pay.custom_plan.stripe' => 'Stripe',
-	'pay.custom_plan.offline_payment' => 'Plată offline',
+	'pay.custom_plan.offline_payment' => 'MPESA PAYBILL',
 	'pay.custom_plan.coinbase' => 'Coinbase',
 	'pay.custom_plan.payu' => 'PayU',
 	'pay.custom_plan.iyzico' => 'Iyzico',

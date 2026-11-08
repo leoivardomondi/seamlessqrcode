@@ -554,7 +554,7 @@ return [
 	'pay.custom_plan.subheader' => 'Sie sind fast am Ziel, füllen Sie das folgende Formular aus und gehen Sie zur Kasse.',
 	'pay.custom_plan.paypal' => 'PayPal',
 	'pay.custom_plan.stripe' => 'Stripe',
-	'pay.custom_plan.offline_payment' => 'Offline-Zahlung',
+	'pay.custom_plan.offline_payment' => 'MPESA PAYBILL',
 	'pay.custom_plan.coinbase' => 'Coinbase',
 	'pay.custom_plan.payu' => 'PayU',
 	'pay.custom_plan.iyzico' => 'Iyzico',

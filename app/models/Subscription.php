@@ -1141,6 +1141,8 @@ class Subscription extends Model {
         if($processor) {
             if($processor == 'paystack') {
                 $processor_label = l('pay.custom_plan.paystack', $subscription->user_language ?? null, true) ?: 'M-PESA/AIRTEL MONEY/CARD';
+            } elseif($processor == 'offline_payment') {
+                $processor_label = l('pay.custom_plan.offline_payment', $subscription->user_language ?? null, true) ?: 'MPESA PAYBILL';
             } else {
                 $processor_label = l('pay.custom_plan.' . $processor, $subscription->user_language ?? null, true) ?? ucwords(str_replace('_', ' ', $processor));
             }

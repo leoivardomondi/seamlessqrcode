@@ -29,8 +29,8 @@ return [
     ],
     'offline_payment' => [
         'payment_type' => ['one_time'],
-        'icon' => 'fas fa-university',
-        'color' => '#393f4a',
+        'icon' => 'fas fa-mobile-alt',
+        'color' => '#00a859',
     ],
     'coinbase' => [
         'payment_type' => ['one_time'],

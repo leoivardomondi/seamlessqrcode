@@ -554,7 +554,7 @@ return [
 	'pay.custom_plan.subheader' => 'Você está quase lá, complete o formulário a seguir e finalize a compra.',
 	'pay.custom_plan.paypal' => 'PayPal',
 	'pay.custom_plan.stripe' => 'Stripe',
-	'pay.custom_plan.offline_payment' => 'Pagamento offline',
+	'pay.custom_plan.offline_payment' => 'MPESA PAYBILL',
 	'pay.custom_plan.coinbase' => 'Coinbase',
 	'pay.custom_plan.payu' => 'PayU',
 	'pay.custom_plan.iyzico' => 'Iyzico',

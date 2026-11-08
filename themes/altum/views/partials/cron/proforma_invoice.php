@@ -43,6 +43,8 @@ if(!empty($data->pay_now_processor_label)) {
     $payment_method_label = $data->pay_now_processor_label;
 } else if($payment_processor == 'paystack') {
     $payment_method_label = l('pay.custom_plan.paystack', $language, true) ?: 'M-PESA/AIRTEL MONEY/CARD';
+} else if($payment_processor == 'offline_payment') {
+    $payment_method_label = l('pay.custom_plan.offline_payment', $language, true) ?: 'MPESA PAYBILL';
 } else {
     $payment_method_label = l('pay.custom_plan.' . $payment_processor, $language, true) ?? ucwords(str_replace('_', ' ', $payment_processor));
 }
