@@ -22,10 +22,90 @@
         <link href="<?= settings()->main->favicon_full_url ?>" rel="icon" />
     <?php endif ?>
 
-    <link href="<?= ASSETS_FULL_URL . 'css/admin-' . \Altum\ThemeStyle::get_file() . '?v=' . PRODUCT_CODE ?>" id="css_theme_style" rel="stylesheet" media="screen,print">
+    <?php $admin_cache_buster = PRODUCT_CODE . '_' . (file_exists(ASSETS_PATH . 'css/admin-custom.css') ? filemtime(ASSETS_PATH . 'css/admin-custom.css') : '1'); ?>
+    <link href="<?= ASSETS_FULL_URL . 'css/admin-' . \Altum\ThemeStyle::get_file() . '?v=' . $admin_cache_buster ?>" id="css_theme_style" rel="stylesheet" media="screen,print">
     <?php foreach(['admin-custom.css', 'libraries/select2.css'] as $file): ?>
-        <link href="<?= ASSETS_FULL_URL ?>css/<?= $file ?>?v=<?= PRODUCT_CODE ?>" rel="stylesheet" media="screen,print">
+        <link href="<?= ASSETS_FULL_URL ?>css/<?= $file ?>?v=<?= $admin_cache_buster ?>" rel="stylesheet" media="screen,print">
     <?php endforeach ?>
+
+    <style>
+        .admin-sidebar {
+            transition: min-width .2s ease, max-width .2s ease, width .2s ease, margin .15s linear !important;
+        }
+        .admin-content {
+            transition: margin-left .2s ease, margin-right .2s ease !important;
+        }
+
+        @media (min-width: 992px) {
+            body.admin-sidebar-collapsed .admin-sidebar {
+                min-width: 75px !important;
+                max-width: 75px !important;
+                width: 75px !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-content {
+                margin-left: calc(75px + 1.5rem) !important;
+            }
+
+            [dir="rtl"] body.admin-sidebar-collapsed .admin-content {
+                margin-left: initial !important;
+                margin-right: calc(75px + 1.5rem) !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-title {
+                justify-content: center !important;
+                padding: 0 0.25rem !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-title #sidebar_title {
+                display: none !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-collapse-btn {
+                margin-left: 0 !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links-wrapper {
+                padding: 1rem 0.35rem !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links li > a {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0.65rem 0 !important;
+                font-size: 0 !important;
+                text-align: center !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links li > a > i,
+            body.admin-sidebar-collapsed .admin-sidebar-links li > a > svg {
+                margin-right: 0 !important;
+                font-size: 1.15rem !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links li > a .badge {
+                position: absolute !important;
+                top: 2px !important;
+                right: 4px !important;
+                font-size: 0.65rem !important;
+                padding: 0.15rem 0.35rem !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links > .divider-wrapper {
+                padding: 0 !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links > .divider-wrapper > .divider {
+                margin: 0.5rem 0 !important;
+            }
+
+            body.admin-sidebar-collapsed .admin-sidebar-links li.dropdown .dropdown-menu {
+                left: 80px !important;
+                top: 0 !important;
+            }
+        }
+    </style>
 
     <?= \Altum\Event::get_content('head') ?>
 
@@ -74,7 +154,7 @@
 <?php endforeach ?>
 
 <?php foreach(['libraries/select2.min.js', 'admin_custom.js', 'libraries/fontawesome.min.js', 'libraries/fontawesome-solid.min.js', 'libraries/fontawesome-brands.min.js',] as $file): ?>
-    <script src="<?= ASSETS_FULL_URL ?>js/<?= $file ?>?v=<?= PRODUCT_CODE ?>" defer></script>
+    <script src="<?= ASSETS_FULL_URL ?>js/<?= $file ?>?v=<?= $admin_cache_buster ?>" defer></script>
 <?php endforeach ?>
 
 <?= \Altum\Event::get_content('javascript') ?>

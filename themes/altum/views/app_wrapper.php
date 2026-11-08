@@ -39,10 +39,81 @@
         <link href="<?= settings()->main->favicon_full_url ?>" rel="icon" />
     <?php endif ?>
 
-    <link href="<?= ASSETS_FULL_URL . 'css/' . \Altum\ThemeStyle::get_file() . '?v=' . PRODUCT_CODE ?>" id="css_theme_style" rel="stylesheet" media="screen,print">
+    <?php $app_cache_buster = PRODUCT_CODE . '_' . (file_exists(ASSETS_PATH . 'css/custom.css') ? filemtime(ASSETS_PATH . 'css/custom.css') : '1'); ?>
+    <link href="<?= ASSETS_FULL_URL . 'css/' . \Altum\ThemeStyle::get_file() . '?v=' . $app_cache_buster ?>" id="css_theme_style" rel="stylesheet" media="screen,print">
     <?php foreach(['custom.css', 'libraries/select2.css'] as $file): ?>
-        <link href="<?= ASSETS_FULL_URL . 'css/' . $file . '?v=' . PRODUCT_CODE ?>" rel="stylesheet" media="screen,print">
+        <link href="<?= ASSETS_FULL_URL . 'css/' . $file . '?v=' . $app_cache_buster ?>" rel="stylesheet" media="screen,print">
     <?php endforeach ?>
+
+    <style>
+        .app-sidebar {
+            transition: min-width .2s ease, max-width .2s ease, width .2s ease, margin-left .15s linear, margin-right .15s linear !important;
+        }
+        .app-content {
+            transition: margin-left .2s ease, margin-right .2s ease !important;
+        }
+
+        @media (min-width: 992px) {
+            body.app-sidebar-collapsed .app-sidebar {
+                min-width: 75px !important;
+                max-width: 75px !important;
+                width: 75px !important;
+            }
+
+            body.app-sidebar-collapsed .app-content {
+                margin-left: calc(75px + 1.5rem) !important;
+            }
+
+            [dir="rtl"] body.app-sidebar-collapsed .app-content {
+                margin-left: initial !important;
+                margin-right: calc(75px + 1.5rem) !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-title {
+                justify-content: center !important;
+                padding: 0.5rem 0.25rem !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-title a[data-logo] {
+                display: none !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-collapse-btn {
+                margin-left: 0 !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-links-wrapper {
+                padding: 1rem 0.35rem !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-links > li > a {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0.65rem 0 !important;
+                font-size: 0 !important;
+                text-align: center !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-links > li > a > i,
+            body.app-sidebar-collapsed .app-sidebar-links > li > a > svg {
+                margin-right: 0 !important;
+                font-size: 1.15rem !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-footer {
+                padding: 0.5rem !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-footer-text {
+                display: none !important;
+            }
+
+            body.app-sidebar-collapsed .app-sidebar-avatar {
+                margin-right: 0 !important;
+            }
+        }
+    </style>
 
     <?= \Altum\Event::get_content('head') ?>
 

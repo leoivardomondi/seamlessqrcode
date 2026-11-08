@@ -19,7 +19,7 @@
             <?php endif ?>
         </a>
 
-        <button type="button" id="app_sidebar_collapse" class="btn btn-sm btn-link text-muted p-1 ml-auto app-sidebar-collapse-btn d-none d-lg-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
+        <button type="button" id="app_sidebar_collapse" onclick="toggleAppSidebarCollapse(event)" class="btn btn-sm btn-link text-muted p-1 ml-auto app-sidebar-collapse-btn d-none d-lg-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
             <i class="fas fa-fw fa-bars"></i>
         </button>
     </div>
@@ -289,5 +289,32 @@
 <?php ob_start() ?>
 <script>
     document.querySelector('ul[class="app-sidebar-links"] li.active') && document.querySelector('ul[class="app-sidebar-links"] li.active').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    function toggleAppSidebarCollapse(event) {
+        if(event) event.preventDefault();
+        document.body.classList.toggle('app-sidebar-collapsed');
+        let is_collapsed = document.body.classList.contains('app-sidebar-collapsed');
+        try {
+            localStorage.setItem('app_sidebar_collapsed', is_collapsed ? 'true' : 'false');
+        } catch(e) {}
+
+        let btn = document.querySelector('#app_sidebar_collapse');
+        if(btn) {
+            btn.innerHTML = is_collapsed ? '<i class="fas fa-fw fa-arrow-right"></i>' : '<i class="fas fa-fw fa-bars"></i>';
+            btn.setAttribute('title', is_collapsed ? 'Expand sidebar' : 'Squeeze / Collapse sidebar');
+        }
+
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 220);
+    }
+
+    if(document.body.classList.contains('app-sidebar-collapsed')) {
+        let btn = document.querySelector('#app_sidebar_collapse');
+        if(btn) {
+            btn.innerHTML = '<i class="fas fa-fw fa-arrow-right"></i>';
+            btn.setAttribute('title', 'Expand sidebar');
+        }
+    }
 </script>
 <?php \Altum\Event::add_content(ob_get_clean(), 'javascript') ?>

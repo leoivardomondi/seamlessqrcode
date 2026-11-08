@@ -140,44 +140,64 @@ $get_default_currency_mrr = function($row) {
 
 <?= \Altum\Alerts::output_alerts() ?>
 
-<div class="admin-stats-grid mb-4">
-    <div class="card h-100 admin-stat-card border-0 shadow-sm">
-        <div class="card-body p-3">
-            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.active') ?></div>
-            <div class="admin-stat-card-value"><?= nr($data->stats['active'] ?? 0) ?></div>
-        </div>
-    </div>
-    <div class="card h-100 admin-stat-card border-0 shadow-sm">
-        <div class="card-body p-3">
-            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.past_due') ?></div>
-            <div class="admin-stat-card-value"><?= nr($data->stats['past_due'] ?? 0) ?></div>
-        </div>
-    </div>
-    <div class="card h-100 admin-stat-card border-0 shadow-sm">
-        <div class="card-body p-3">
-            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.paused') ?></div>
-            <div class="admin-stat-card-value"><?= nr($data->stats['paused'] ?? 0) ?></div>
-        </div>
-    </div>
-    <div class="card h-100 admin-stat-card border-0 shadow-sm">
-        <div class="card-body p-3">
-            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.non_renewing') ?></div>
-            <div class="admin-stat-card-value"><?= nr($data->stats['non_renewing'] ?? 0) ?></div>
-        </div>
-    </div>
-    <div class="card h-100 admin-stat-card border-0 shadow-sm">
-        <div class="card-body p-3">
-            <div class="admin-stat-card-title text-muted"><?= l('admin_subscriptions.mrr') ?></div>
-            <div class="admin-stat-card-value">
-                <?= nr($data->mrr, 2) ?> <span class="admin-stat-card-currency"><?= settings()->payment->default_currency ?></span>
+<div class="admin-stats-horizontal-row d-flex flex-row flex-nowrap overflow-auto mb-4 pb-2" style="gap: 0.75rem; -webkit-overflow-scrolling: touch;">
+    <div class="card border-0 shadow-sm flex-fill" style="min-width: 120px;">
+        <div class="card-body p-2 px-3 d-flex flex-column justify-content-between">
+            <div class="text-muted text-truncate font-weight-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                <?= l('subscription_status.active') ?>
+            </div>
+            <div class="font-weight-bold text-truncate" style="font-size: 1.15rem; line-height: 1.2;">
+                <?= nr($data->stats['active'] ?? 0) ?>
             </div>
         </div>
     </div>
-    <div class="card h-100 admin-stat-card border-0 shadow-sm">
-        <div class="card-body p-3">
-            <div class="admin-stat-card-title text-muted"><?= l('admin_subscriptions.arr') ?></div>
-            <div class="admin-stat-card-value">
-                <?= nr($data->arr, 2) ?> <span class="admin-stat-card-currency"><?= settings()->payment->default_currency ?></span>
+    <div class="card border-0 shadow-sm flex-fill" style="min-width: 120px;">
+        <div class="card-body p-2 px-3 d-flex flex-column justify-content-between">
+            <div class="text-muted text-truncate font-weight-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                <?= l('subscription_status.past_due') ?>
+            </div>
+            <div class="font-weight-bold text-truncate" style="font-size: 1.15rem; line-height: 1.2;">
+                <?= nr($data->stats['past_due'] ?? 0) ?>
+            </div>
+        </div>
+    </div>
+    <div class="card border-0 shadow-sm flex-fill" style="min-width: 120px;">
+        <div class="card-body p-2 px-3 d-flex flex-column justify-content-between">
+            <div class="text-muted text-truncate font-weight-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                <?= l('subscription_status.paused') ?>
+            </div>
+            <div class="font-weight-bold text-truncate" style="font-size: 1.15rem; line-height: 1.2;">
+                <?= nr($data->stats['paused'] ?? 0) ?>
+            </div>
+        </div>
+    </div>
+    <div class="card border-0 shadow-sm flex-fill" style="min-width: 120px;">
+        <div class="card-body p-2 px-3 d-flex flex-column justify-content-between">
+            <div class="text-muted text-truncate font-weight-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                <?= l('subscription_status.non_renewing') ?>
+            </div>
+            <div class="font-weight-bold text-truncate" style="font-size: 1.15rem; line-height: 1.2;">
+                <?= nr($data->stats['non_renewing'] ?? 0) ?>
+            </div>
+        </div>
+    </div>
+    <div class="card border-0 shadow-sm flex-fill" style="min-width: 145px;">
+        <div class="card-body p-2 px-3 d-flex flex-column justify-content-between">
+            <div class="text-muted text-truncate font-weight-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                <?= l('admin_subscriptions.mrr') ?>
+            </div>
+            <div class="font-weight-bold text-truncate" style="font-size: 1rem; line-height: 1.2; white-space: nowrap;">
+                <?= nr($data->mrr, 2) ?> <span class="text-muted font-weight-normal" style="font-size: 0.72rem;"><?= settings()->payment->default_currency ?></span>
+            </div>
+        </div>
+    </div>
+    <div class="card border-0 shadow-sm flex-fill" style="min-width: 145px;">
+        <div class="card-body p-2 px-3 d-flex flex-column justify-content-between">
+            <div class="text-muted text-truncate font-weight-bold mb-1" style="font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                <?= l('admin_subscriptions.arr') ?>
+            </div>
+            <div class="font-weight-bold text-truncate" style="font-size: 1rem; line-height: 1.2; white-space: nowrap;">
+                <?= nr($data->arr, 2) ?> <span class="text-muted font-weight-normal" style="font-size: 0.72rem;"><?= settings()->payment->default_currency ?></span>
             </div>
         </div>
     </div>

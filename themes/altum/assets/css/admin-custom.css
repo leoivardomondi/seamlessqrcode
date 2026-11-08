@@ -270,6 +270,31 @@ body.admin-sidebar-opened .admin-sidebar {
 }
 
 /* Responsive stats cards grid for laptops (13.3", 14", 15") and desktops */
+/* Horizontal stats row across all laptop sizes (13.3", 14", 15") and desktops */
+.admin-stats-horizontal-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    scrollbar-width: thin;
+}
+
+.admin-stats-horizontal-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.admin-stats-horizontal-row::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+[data-theme-style="dark"] .admin-stats-horizontal-row::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .admin-stats-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
