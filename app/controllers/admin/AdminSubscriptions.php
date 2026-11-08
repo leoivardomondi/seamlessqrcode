@@ -210,12 +210,20 @@ class AdminSubscriptions extends Controller {
         $_POST['frequency'] = query_clean($_POST['frequency'] ?? '');
         $_POST['currency'] = query_clean($_POST['currency'] ?? '');
         $_POST['payment_datetime'] = query_clean($_POST['payment_datetime'] ?? '');
+        $_POST['start_datetime'] = query_clean($_POST['start_datetime'] ?? '');
+        $_POST['end_datetime'] = query_clean($_POST['end_datetime'] ?? '');
+        $_POST['confirmation_message'] = trim($_POST['confirmation_message'] ?? '');
+        $_POST['code'] = query_clean($_POST['code'] ?? '');
 
         $result = $subscription_model->apply_manual_period(
             $subscription->subscription_id,
             $_POST['frequency'],
             $_POST['currency'] ?: null,
-            $_POST['payment_datetime'] ?: null
+            $_POST['payment_datetime'] ?: null,
+            $_POST['start_datetime'] ?: null,
+            $_POST['end_datetime'] ?: null,
+            $_POST['confirmation_message'] ?: null,
+            $_POST['code'] ?: null
         );
 
         if($result) {

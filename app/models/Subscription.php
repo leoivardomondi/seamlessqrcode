@@ -521,12 +521,12 @@ class Subscription extends Model {
         $period_start = $this->normalize_datetime($data['period_start'] ?? null);
         $period_end = $this->normalize_datetime($data['period_end'] ?? null);
 
-        if($paid_datetime) {
+        if(!$period_start && $paid_datetime) {
             $period_start = $paid_datetime;
+        }
 
-            if(!empty($data['payment_frequency'])) {
-                $period_end = $this->calculate_period_end($period_start, $data['payment_frequency']);
-            }
+        if(!$period_end && $period_start && !empty($data['payment_frequency'])) {
+            $period_end = $this->calculate_period_end($period_start, $data['payment_frequency']);
         }
 
         $subtotal = $this->decimal($data['base_amount'] ?? $data['payment_total']);
@@ -950,7 +950,107 @@ class Subscription extends Model {
         $business->invoice_nr_prefix = in_array($prefix, ['', 'INV-'], true) ? 'INV-642021' : $prefix;
     }
 
-    public function apply_manual_period($subscription_id, $frequency, $currency = null, $payment_datetime = null) {
+    public function parse_payment_confirmation($text) {
+        $text = trim($text ?? '');
+        if(empty($text)) {
+            return [
+                'is_valid' => false,
+                'code' => null,
+                'amount' => null,
+                'datetime' => null,
+                'raw_text' => null,
+            ];
+        }
+
+        $result = [
+            'is_valid' => false,
+            'code' => null,
+            'amount' => null,
+            'datetime' => null,
+            'raw_text' => $text,
+        ];
+
+        /* 1. Transaction Code (M-PESA / Bank / Airtel) */
+        if(preg_match('/\b([A-Z0-9]{10})\s+(?:Confirmed|confirmed)/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        } else if(preg_match('/(?:Trans(?:action)?\s*(?:ID|Id|id|No|Ref)?|Ref(?:erence)?)\s*[:#.]?\s*([A-Z0-9]{6,20})/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        } else if(preg_match('/\b([A-Z]{2}[0-9A-Z]{8})\b/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        } else if(preg_match('/^([A-Z0-9]{8,14})\b/i', $text, $match)) {
+            $result['code'] = strtoupper($match[1]);
+        }
+
+        /* 2. Amount */
+        if(preg_match('/(?:Ksh|KES|\$|USD)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i', $text, $match)) {
+            $result['amount'] = (float) str_replace(',', '', $match[1]);
+        } else if(preg_match('/(?:sent|paid|received|transferred)\s*(?:to|from)?\s*(?:Ksh|KES|\$)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i', $text, $match)) {
+            $result['amount'] = (float) str_replace(',', '', $match[1]);
+        }
+
+        /* 3. Date and Time Extraction */
+        if(preg_match('/(?:on|On|dated|date:?)\s*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s+at|\s*,|\s+)\s*(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i', $text, $match)) {
+            $day = (int) $match[1];
+            $month = (int) $match[2];
+            $year = (int) $match[3];
+            $time = $match[4];
+
+            if($year < 100) $year += 2000;
+            if($month > 12 && $day <= 12) {
+                $tmp = $day;
+                $day = $month;
+                $month = $tmp;
+            }
+
+            $formatted = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
+            $timestamp = strtotime($formatted);
+            if($timestamp) {
+                $result['datetime'] = date('Y-m-d H:i:s', $timestamp);
+            }
+        } else if(preg_match('/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\s+at\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i', $text, $match)) {
+            $day = (int) $match[1];
+            $month = (int) $match[2];
+            $year = (int) $match[3];
+            $time = $match[4];
+
+            if($year < 100) $year += 2000;
+            if($month > 12 && $day <= 12) {
+                $tmp = $day;
+                $day = $month;
+                $month = $tmp;
+            }
+
+            $formatted = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
+            $timestamp = strtotime($formatted);
+            if($timestamp) {
+                $result['datetime'] = date('Y-m-d H:i:s', $timestamp);
+            }
+        } else if(preg_match('/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/i', $text, $match)) {
+            $day = (int) $match[1];
+            $month = (int) $match[2];
+            $year = (int) $match[3];
+            if($year < 100) $year += 2000;
+            if($month > 12 && $day <= 12) {
+                $tmp = $day;
+                $day = $month;
+                $month = $tmp;
+            }
+
+            $formatted = sprintf('%04d-%02d-%02d %s', $year, $month, $day, date('H:i:s'));
+            $timestamp = strtotime($formatted);
+            if($timestamp) {
+                $result['datetime'] = date('Y-m-d H:i:s', $timestamp);
+            }
+        }
+
+        if(!empty($result['code']) || !empty($result['amount']) || !empty($result['datetime'])) {
+            $result['is_valid'] = true;
+        }
+
+        return $result;
+    }
+
+    public function apply_manual_period($subscription_id, $frequency, $currency = null, $payment_datetime = null, $period_start = null, $period_end = null, $confirmation_message = null, $code = null) {
         $this->ensure_schema();
 
         $subscription = $this->get_by_id($subscription_id);
@@ -959,7 +1059,8 @@ class Subscription extends Model {
             return false;
         }
 
-        if(!in_array($frequency, ['monthly', 'annual'])) {
+        $allowed_frequencies = ['monthly', 'quarterly', 'biannual', 'annual'];
+        if(!in_array($frequency, $allowed_frequencies)) {
             return false;
         }
 
@@ -969,10 +1070,24 @@ class Subscription extends Model {
             return false;
         }
 
-        $user = db()->where('user_id', $subscription->user_id)->getOne('users', ['user_id', 'email', 'name', 'billing']);
+        $user = db()->where('user_id', $subscription->user_id)->getOne('users', ['user_id', 'email', 'name', 'billing', 'status']);
 
         if(!$user) {
             return false;
+        }
+
+        /* Parse confirmation message if provided */
+        $parsed = null;
+        if(!empty($confirmation_message)) {
+            $parsed = $this->parse_payment_confirmation($confirmation_message);
+            if(!empty($parsed['is_valid'])) {
+                if(empty($code) && !empty($parsed['code'])) {
+                    $code = $parsed['code'];
+                }
+                if(empty($payment_datetime) && !empty($parsed['datetime'])) {
+                    $payment_datetime = $parsed['datetime'];
+                }
+            }
         }
 
         $currency = $currency ?: ($subscription->currency ?: settings()->payment->default_currency);
@@ -984,7 +1099,20 @@ class Subscription extends Model {
         }
 
         if($price === null) {
-            return false;
+            $monthly_price = $this->get_plan_frequency_price($plan, 'monthly', $currency);
+            if($monthly_price !== null) {
+                $multiplier = match($frequency) {
+                    'quarterly' => 3,
+                    'biannual' => 6,
+                    'annual' => 12,
+                    default => 1,
+                };
+                $price = $monthly_price * $multiplier;
+            } else if(!empty($parsed['amount']) && (float) $parsed['amount'] > 0) {
+                $price = (float) $parsed['amount'];
+            } else {
+                return false;
+            }
         }
 
         $price = $this->decimal($price);
@@ -996,9 +1124,36 @@ class Subscription extends Model {
         $total_amount_default_currency = $this->get_total_amount_default_currency($price, $currency);
         $processed_datetime = get_date();
         $payment_datetime = $this->normalize_datetime($payment_datetime) ?? $processed_datetime;
-        $period_start = $this->get_renewal_period_start($subscription->current_period_end ?? null, $payment_datetime);
-        $period_end = $this->calculate_period_end($period_start, $frequency);
+
+        if(!empty($period_start)) {
+            $period_start = $this->normalize_datetime($period_start);
+        }
+        if(!$period_start) {
+            $period_start = $this->get_renewal_period_start($subscription->current_period_end ?? null, $payment_datetime);
+        }
+
+        if(!empty($period_end)) {
+            $period_end = $this->normalize_datetime($period_end);
+        }
+        if(!$period_end) {
+            $period_end = $this->calculate_period_end($period_start, $frequency);
+        }
+
         $status = $this->resolve_paid_subscription_status($frequency, $period_end);
+
+        $subscription_metadata = [
+            'manual_period' => true,
+            'payment_datetime' => $payment_datetime,
+            'period_start' => $period_start,
+            'period_end' => $period_end,
+            'price_source' => 'plan.' . $frequency . '.' . $currency,
+        ];
+        if(!empty($code)) {
+            $subscription_metadata['code'] = $code;
+        }
+        if(!empty($confirmation_message)) {
+            $subscription_metadata['confirmation_message'] = $confirmation_message;
+        }
 
         db()->where('subscription_id', $subscription->subscription_id)->update('subscriptions', [
             'status' => $status,
@@ -1012,7 +1167,7 @@ class Subscription extends Model {
             'taxes_ids' => $plan->taxes_ids ?? null,
             'processor' => 'offline_payment',
             'external_subscription_id' => null,
-            'external_payment_id' => null,
+            'external_payment_id' => $code ?: null,
             'auto_collection' => 0,
             'current_period_start' => $period_start,
             'current_period_end' => $period_end,
@@ -1020,12 +1175,7 @@ class Subscription extends Model {
             'canceled_at' => null,
             'pause_start' => null,
             'pause_end' => null,
-            'metadata' => json_encode([
-                'manual_period' => true,
-                'payment_datetime' => $payment_datetime,
-                'period_start' => $period_start,
-                'price_source' => 'plan.' . $frequency . '.' . $currency,
-            ]),
+            'metadata' => json_encode($subscription_metadata),
             'last_datetime' => $processed_datetime,
         ]);
 
@@ -1040,21 +1190,19 @@ class Subscription extends Model {
             'total_amount' => $price,
             'currency' => $currency,
             'is_recurring' => 1,
-            'metadata' => json_encode([
-                'manual_period' => true,
-                'price_source' => 'plan.' . $frequency . '.' . $currency,
-            ]),
+            'metadata' => json_encode($subscription_metadata),
             'datetime' => $period_start,
         ]);
 
-        $payment_unique_id = 'manual_' . md5($subscription->subscription_id . $subscription->user_id . $subscription->plan_id . $frequency . $payment_datetime . $processed_datetime);
+        $payment_unique_id = $code ?: ('manual_' . md5($subscription->subscription_id . $subscription->user_id . $subscription->plan_id . $frequency . $payment_datetime . $processed_datetime));
+
         $payment_id = db()->insert('payments', [
             'user_id' => $subscription->user_id,
             'plan_id' => $subscription->plan_id,
             'processor' => 'offline_payment',
             'type' => 'one_time',
             'frequency' => $frequency,
-            'code' => null,
+            'code' => $code ?: null,
             'discount_amount' => 0,
             'base_amount' => $price,
             'email' => $user->email,
@@ -1074,36 +1222,73 @@ class Subscription extends Model {
             'datetime' => $payment_datetime,
         ]);
 
-        $invoice_id = $this->create_paid_invoice($subscription->subscription_id, [
-            'local_payment_id' => $payment_id,
-            'external_payment_id' => $payment_unique_id,
-            'payment_processor' => 'offline_payment',
-            'payment_total' => $price,
-            'total_amount_default_currency' => $total_amount_default_currency,
-            'payment_currency' => $currency,
-            'payment_datetime' => $payment_datetime,
-            'invoice_datetime' => $payment_datetime,
-            'user_id' => $subscription->user_id,
-            'plan_id' => $subscription->plan_id,
-            'plan_name' => $plan->name ?? null,
-            'payment_frequency' => $frequency,
-            'code' => null,
-            'discount_amount' => 0,
-            'base_amount' => $price,
-            'taxes_ids' => $plan->taxes_ids ?? null,
-            'payment_type' => 'one_time',
-            'payment_subscription_id' => null,
-            'period_start' => $period_start,
-            'period_end' => $period_end,
-            'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
-            'business' => json_encode(settings()->business),
-            'metadata' => [
-                'manual_period' => true,
-                'price_source' => 'plan.' . $frequency . '.' . $currency,
-            ],
-        ]);
+        /* Look for an existing pending/proforma invoice for this subscription */
+        $pending_invoice = db()
+            ->where('subscription_id', $subscription->subscription_id)
+            ->where('status', 'paid', '!=')
+            ->orderBy('invoice_id', 'DESC')
+            ->getOne('invoices');
+
+        if($pending_invoice) {
+            $invoice_id = (int) $pending_invoice->invoice_id;
+            $inv_metadata = json_decode($pending_invoice->metadata ?? '{}', true) ?: [];
+            $inv_metadata['manual_period'] = true;
+            $inv_metadata['period_start'] = $period_start;
+            $inv_metadata['period_end'] = $period_end;
+            if($code) $inv_metadata['code'] = $code;
+            if($confirmation_message) $inv_metadata['confirmation_message'] = $confirmation_message;
+
+            db()->where('invoice_id', $invoice_id)->update('invoices', [
+                'payment_id' => $payment_id,
+                'status' => 'paid',
+                'processor' => 'offline_payment',
+                'external_payment_id' => $payment_unique_id,
+                'frequency' => $frequency,
+                'code' => $code ?: null,
+                'total_amount' => $price,
+                'total_amount_default_currency' => $total_amount_default_currency,
+                'currency' => $currency,
+                'paid_datetime' => $payment_datetime,
+                'datetime' => $payment_datetime,
+                'metadata' => json_encode($inv_metadata),
+            ]);
+        } else {
+            $invoice_id = $this->create_paid_invoice($subscription->subscription_id, [
+                'local_payment_id' => $payment_id,
+                'external_payment_id' => $payment_unique_id,
+                'payment_processor' => 'offline_payment',
+                'payment_total' => $price,
+                'total_amount_default_currency' => $total_amount_default_currency,
+                'payment_currency' => $currency,
+                'payment_datetime' => $payment_datetime,
+                'invoice_datetime' => $payment_datetime,
+                'user_id' => $subscription->user_id,
+                'plan_id' => $subscription->plan_id,
+                'plan_name' => $plan->name ?? null,
+                'payment_frequency' => $frequency,
+                'code' => $code ?: null,
+                'discount_amount' => 0,
+                'base_amount' => $price,
+                'taxes_ids' => $plan->taxes_ids ?? null,
+                'payment_type' => 'one_time',
+                'payment_subscription_id' => null,
+                'period_start' => $period_start,
+                'period_end' => $period_end,
+                'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
+                'business' => json_encode(settings()->business),
+                'metadata' => $subscription_metadata,
+            ]);
+        }
 
         $this->sync_user_from_subscription($subscription->subscription_id);
+
+        /* Automatically activate the account if deactivated and mark trial done */
+        db()->where('user_id', $subscription->user_id)->update('users', [
+            'status' => 1,
+            'plan_trial_done' => 1,
+            'plan_expiration_date' => $period_end,
+        ]);
+        cache()->deleteItemsByTag('user_id=' . $subscription->user_id);
 
         $this->log_event('subscription.manual_period_applied', [
             'subscription_id' => $subscription->subscription_id,
@@ -1119,6 +1304,7 @@ class Subscription extends Model {
                 'payment_datetime' => $payment_datetime,
                 'period_start' => $period_start,
                 'period_end' => $period_end,
+                'code' => $code,
             ],
         ]);
 
@@ -1129,7 +1315,9 @@ class Subscription extends Model {
             'frequency' => $frequency,
             'currency' => $currency,
             'amount' => $price,
+            'period_start' => $period_start,
             'period_end' => $period_end,
+            'code' => $code,
         ];
     }
 

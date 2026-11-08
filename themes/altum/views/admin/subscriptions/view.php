@@ -17,18 +17,29 @@ $format_status = function($status) {
     return l('subscription_status.' . $status, null, true) ?? ucfirst(str_replace('_', ' ', $status));
 };
 
-$manual_period_frequencies = ['monthly', 'annual'];
+$manual_period_frequencies = ['monthly', 'quarterly', 'biannual', 'annual'];
 $manual_period_currency = $subscription->currency ?: settings()->payment->default_currency;
 $manual_period_currencies = [];
 $manual_period_price_map = [];
 
 foreach((array) settings()->payment->currencies as $currency => $currency_data) {
     $manual_period_currencies[$currency] = $currency_data;
+    $monthly_price = isset($data->plan->prices->monthly->{$currency}) ? (float) $data->plan->prices->monthly->{$currency} : null;
 
     foreach($manual_period_frequencies as $frequency) {
-        $manual_period_price_map[$frequency][$currency] = isset($data->plan->prices->{$frequency}->{$currency})
-            ? (float) $data->plan->prices->{$frequency}->{$currency}
-            : null;
+        if(isset($data->plan->prices->{$frequency}->{$currency})) {
+            $manual_period_price_map[$frequency][$currency] = (float) $data->plan->prices->{$frequency}->{$currency};
+        } else if($monthly_price !== null) {
+            $multiplier = match($frequency) {
+                'quarterly' => 3,
+                'biannual' => 6,
+                'annual' => 12,
+                default => 1,
+            };
+            $manual_period_price_map[$frequency][$currency] = (float) ($monthly_price * $multiplier);
+        } else {
+            $manual_period_price_map[$frequency][$currency] = null;
+        }
     }
 }
 
@@ -98,8 +109,141 @@ document.addEventListener('DOMContentLoaded', () => {
         const currency = form.querySelector('[name="currency"]');
         const amount = form.querySelector('[data-manual-period-amount]');
         const submit = form.querySelector('[data-manual-period-submit]');
+        const confirmation_message = form.querySelector('[name="confirmation_message"]');
+        const code_input = form.querySelector('[name="code"]');
+        const payment_datetime_input = form.querySelector('[name="payment_datetime"]');
+        const start_datetime_input = form.querySelector('[name="start_datetime"]');
+        const end_datetime_input = form.querySelector('[name="end_datetime"]');
+        const next_renewal_preview = form.querySelector('#manual_period_next_renewal_preview');
+        const extraction_badge = form.querySelector('#manual_period_extraction_badge');
 
         const price_not_configured = <?= json_encode(l('admin_subscriptions.price_not_configured')) ?>;
+
+        const pad = n => String(n).padStart(2, '0');
+
+        const calculate_next_renewal = () => {
+            if(!start_datetime_input || !next_renewal_preview) return;
+
+            const start_val = start_datetime_input.value;
+            if(!start_val) {
+                next_renewal_preview.textContent = '-';
+                if(end_datetime_input) end_datetime_input.value = '';
+                return;
+            }
+
+            const start_date = new Date(start_val);
+            if(isNaN(start_date.getTime())) {
+                next_renewal_preview.textContent = '-';
+                if(end_datetime_input) end_datetime_input.value = '';
+                return;
+            }
+
+            const selected_frequency = frequency.value;
+            let end_date = new Date(start_date.getTime());
+
+            if(selected_frequency === 'monthly') {
+                end_date.setMonth(end_date.getMonth() + 1);
+            } else if(selected_frequency === 'quarterly') {
+                end_date.setMonth(end_date.getMonth() + 3);
+            } else if(selected_frequency === 'biannual') {
+                end_date.setMonth(end_date.getMonth() + 6);
+            } else if(selected_frequency === 'annual') {
+                end_date.setFullYear(end_date.getFullYear() + 1);
+            }
+
+            const iso_end = `${end_date.getFullYear()}-${pad(end_date.getMonth() + 1)}-${pad(end_date.getDate())} ${pad(end_date.getHours())}:${pad(end_date.getMinutes())}:00`;
+            if(end_datetime_input) {
+                end_datetime_input.value = iso_end;
+            }
+
+            const options = { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            next_renewal_preview.textContent = end_date.toLocaleDateString(undefined, options);
+        };
+
+        const parse_message = (text) => {
+            if(!text || !text.trim()) return null;
+            let code = null, amount_val = null, datetime_iso = null, datetime_display = null;
+
+            // 1. Transaction Code (M-PESA / Bank / Airtel)
+            const codeMatch1 = text.match(/\b([A-Z0-9]{10})\s+(?:Confirmed|confirmed)/i);
+            const codeMatch2 = text.match(/(?:Trans(?:action)?\s*(?:ID|Id|id|No|Ref)?|Ref(?:erence)?)\s*[:#.]?\s*([A-Z0-9]{6,20})/i);
+            const codeMatch3 = text.match(/\b([A-Z]{2}[0-9A-Z]{8})\b/i);
+            const codeMatch4 = text.match(/^([A-Z0-9]{8,14})\b/i);
+
+            if(codeMatch1) code = codeMatch1[1].toUpperCase();
+            else if(codeMatch2) code = codeMatch2[1].toUpperCase();
+            else if(codeMatch3) code = codeMatch3[1].toUpperCase();
+            else if(codeMatch4) code = codeMatch4[1].toUpperCase();
+
+            // 2. Amount
+            const amtMatch = text.match(/(?:Ksh|KES|\$|USD)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i)
+                || text.match(/(?:sent|paid|received|transferred)\s*(?:to|from)?\s*(?:Ksh|KES|\$)?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i);
+            if(amtMatch) {
+                amount_val = parseFloat(amtMatch[1].replace(/,/g, ''));
+            }
+
+            // 3. Date & Time
+            const dtMatch = text.match(/(?:on|On|dated|date:?)\s*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})(?:\s+at|\s*,|\s+)\s*(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i)
+                || text.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\s+at\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)/i);
+
+            if(dtMatch) {
+                let day = parseInt(dtMatch[1], 10);
+                let month = parseInt(dtMatch[2], 10);
+                let year = parseInt(dtMatch[3], 10);
+                let timeStr = dtMatch[4];
+
+                if(year < 100) year += 2000;
+                if(month > 12 && day <= 12) {
+                    const tmp = day;
+                    day = month;
+                    month = tmp;
+                }
+
+                let hours = 0, minutes = 0;
+                const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+                if(timeMatch) {
+                    hours = parseInt(timeMatch[1], 10);
+                    minutes = parseInt(timeMatch[2], 10);
+                    const meridiem = (timeMatch[3] || '').toUpperCase();
+                    if(meridiem === 'PM' && hours < 12) hours += 12;
+                    if(meridiem === 'AM' && hours === 12) hours = 0;
+                }
+
+                datetime_iso = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}`;
+                datetime_display = `${pad(day)}/${pad(month)}/${year} ${timeStr}`;
+            }
+
+            if(code || amount_val !== null || datetime_iso) {
+                return { code, amount: amount_val, datetime_iso, datetime_display };
+            }
+            return null;
+        };
+
+        if(confirmation_message) {
+            const handle_confirmation_input = () => {
+                const extracted = parse_message(confirmation_message.value);
+                if(extracted) {
+                    if(extracted.code && code_input) {
+                        code_input.value = extracted.code;
+                    }
+                    if(extracted.datetime_iso) {
+                        if(payment_datetime_input) payment_datetime_input.value = extracted.datetime_iso;
+                        if(start_datetime_input) start_datetime_input.value = extracted.datetime_iso;
+                        calculate_next_renewal();
+                    }
+                    if(extraction_badge) {
+                        extraction_badge.innerHTML = `<div class="alert alert-success py-2 px-3 small mb-0"><i class="fas fa-check-circle mr-1"></i> <strong>Extracted from message:</strong> ${extracted.code ? 'Code: <code>' + extracted.code + '</code> ' : ''}${extracted.amount ? ' | Amount: <strong>' + extracted.amount.toLocaleString(undefined, {minimumFractionDigits: 2}) + '</strong>' : ''}${extracted.datetime_display ? ' | Date: <strong>' + extracted.datetime_display + '</strong>' : ''}</div>`;
+                        extraction_badge.style.display = 'block';
+                    }
+                } else if(extraction_badge) {
+                    extraction_badge.style.display = 'none';
+                    extraction_badge.innerHTML = '';
+                }
+            };
+
+            confirmation_message.addEventListener('input', handle_confirmation_input);
+            confirmation_message.addEventListener('paste', () => setTimeout(handle_confirmation_input, 50));
+        }
 
         const update_amount = () => {
             const selected_frequency = frequency.value;
@@ -122,11 +266,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }) + ' ' + selected_currency;
 
             submit.disabled = Number.isNaN(price) || price < 0;
+            calculate_next_renewal();
         };
 
-        frequency.addEventListener('change', update_amount);
+        frequency.addEventListener('change', () => {
+            update_amount();
+            calculate_next_renewal();
+        });
         currency.addEventListener('change', update_amount);
+        if(start_datetime_input) {
+            start_datetime_input.addEventListener('change', calculate_next_renewal);
+            start_datetime_input.addEventListener('input', calculate_next_renewal);
+        }
+
         update_amount();
+        calculate_next_renewal();
     });
 
     document.querySelectorAll('[data-manual-period-open-confirm]').forEach(button => {
@@ -142,6 +296,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             manual_period_form = form;
+
+            const modal = document.querySelector('#manual_period_confirm_modal');
+            if(modal) {
+                const code_val = form.querySelector('[name="code"]')?.value || 'N/A';
+                const freq_elem = form.querySelector('[name="frequency"]');
+                const freq_text = freq_elem ? freq_elem.options[freq_elem.selectedIndex].text : '';
+                const start_val = form.querySelector('[name="start_datetime"]')?.value || '';
+                const end_text = form.querySelector('#manual_period_next_renewal_preview')?.textContent || '';
+                const amt_text = form.querySelector('[data-manual-period-amount]')?.textContent || '';
+
+                const summary_code = modal.querySelector('[data-summary-code]');
+                const summary_freq = modal.querySelector('[data-summary-frequency]');
+                const summary_start = modal.querySelector('[data-summary-start]');
+                const summary_end = modal.querySelector('[data-summary-end]');
+                const summary_amount = modal.querySelector('[data-summary-amount]');
+
+                if(summary_code) summary_code.textContent = code_val;
+                if(summary_freq) summary_freq.textContent = freq_text;
+                if(summary_start) summary_start.textContent = start_val ? start_val.replace('T', ' ') : '-';
+                if(summary_end) summary_end.textContent = end_text;
+                if(summary_amount) summary_amount.textContent = amt_text;
+            }
+
             $('#manual_period_confirm_modal').modal('show');
         });
     });
@@ -231,6 +408,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         <script type="application/json" data-manual-period-prices><?= json_encode($manual_period_price_map) ?></script>
 
                         <div class="form-group">
+                            <label for="manual_period_confirmation_message"><i class="fas fa-fw fa-sm fa-receipt text-muted mr-1"></i> Payment confirmation message (M-PESA / Bank)</label>
+                            <textarea id="manual_period_confirmation_message" name="confirmation_message" class="form-control" rows="3" placeholder="Paste M-PESA paybill or bank confirmation message here (e.g. SLD3821K9L Confirmed. Ksh2,600.00 sent to CO-OPERATIVE BANK OF KENYA on 8/11/26 at 8:37 PM)..."></textarea>
+                            <small class="form-text text-muted">Paste the confirmation message to automatically extract transaction code, payment date & time, and amount.</small>
+                            <div id="manual_period_extraction_badge" class="mt-2" style="display: none;"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="manual_period_code"><i class="fas fa-fw fa-sm fa-barcode text-muted mr-1"></i> Transaction code / Reference</label>
+                            <input id="manual_period_code" type="text" name="code" class="form-control" placeholder="e.g. SLD3821K9L" />
+                        </div>
+
+                        <div class="form-group">
                             <label for="manual_period_frequency"><i class="fas fa-fw fa-sm fa-calendar-alt text-muted mr-1"></i> <?= l('pay.custom_plan.payment_frequency') ?></label>
                             <select id="manual_period_frequency" name="frequency" class="custom-select" required="required">
                                 <?php foreach($manual_period_frequencies as $frequency): ?>
@@ -254,13 +443,28 @@ document.addEventListener('DOMContentLoaded', () => {
                             <small class="form-text text-muted"><?= l('admin_subscriptions.payment_datetime_help') ?></small>
                         </div>
 
+                        <div class="form-group">
+                            <label for="manual_period_start_datetime"><i class="fas fa-fw fa-sm fa-calendar-plus text-muted mr-1"></i> Subscription start date</label>
+                            <input id="manual_period_start_datetime" type="datetime-local" name="start_datetime" class="form-control" value="<?= $manual_period_payment_datetime ?>" required="required" />
+                            <small class="form-text text-muted">Date the renewed subscription period begins (defaults to payment date).</small>
+                        </div>
+
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted"><i class="fas fa-fw fa-sm fa-clock mr-1"></i> Next renewable date:</span>
+                                <span class="font-weight-bold text-primary" id="manual_period_next_renewal_preview">-</span>
+                            </div>
+                            <input type="hidden" name="end_datetime" id="manual_period_end_datetime" value="" />
+                            <small class="text-muted d-block mt-1">Calculated automatically based on start date and frequency.</small>
+                        </div>
+
                         <div class="d-flex justify-content-between align-items-center border rounded p-3 mb-3">
                             <span class="text-muted"><?= l('account_billing.total') ?></span>
-                            <span class="font-weight-bold" data-manual-period-amount></span>
+                            <span class="font-weight-bold text-success h5 mb-0" data-manual-period-amount></span>
                         </div>
 
                         <button type="button" class="btn btn-primary btn-block" data-manual-period-submit data-manual-period-open-confirm>
-                            <i class="fas fa-fw fa-sm fa-check mr-1"></i> <?= l('admin_subscriptions.manual_period_submit') ?>
+                            <i class="fas fa-fw fa-sm fa-check mr-1"></i> Record payment & mark as paid
                         </button>
                     </form>
                 </div>
@@ -415,10 +619,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <p class="text-muted"><?= l('admin_subscriptions.confirm.manual_period') ?></p>
 
+                <div class="border rounded p-3 mb-3 bg-light small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Transaction Code:</span>
+                        <span class="font-weight-bold" data-summary-code>-</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Frequency:</span>
+                        <span class="font-weight-bold" data-summary-frequency>-</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Subscription Start:</span>
+                        <span class="font-weight-bold" data-summary-start>-</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Next Renewable Date:</span>
+                        <span class="font-weight-bold text-primary" data-summary-end>-</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Total:</span>
+                        <span class="font-weight-bold text-success" data-summary-amount>-</span>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-end mt-4">
                     <button type="button" class="btn btn-light mr-2" data-dismiss="modal"><?= l('global.cancel') ?></button>
                     <button type="button" class="btn btn-primary" data-manual-period-confirm-submit>
-                        <i class="fas fa-fw fa-sm fa-check mr-1"></i> <?= l('admin_subscriptions.manual_period_submit') ?>
+                        <i class="fas fa-fw fa-sm fa-check mr-1"></i> Record payment & mark as paid
                     </button>
                 </div>
             </div>
