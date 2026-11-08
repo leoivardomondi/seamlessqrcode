@@ -97,7 +97,8 @@ class WebhookPaystack extends Controller {
                 $payment_type,
                 $payment_subscription_id,
                 $payer_email,
-                $payer_name
+                $payer_name,
+                ['invoice_id' => !empty($metadata->invoice_id) ? (int) $metadata->invoice_id : null]
             );
 
             die('successful');

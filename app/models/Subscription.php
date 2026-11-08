@@ -499,6 +499,295 @@ class Subscription extends Model {
         ];
     }
 
+    public function find_most_qualified_proforma_invoice(array $criteria) {
+        $this->ensure_schema();
+
+        $user_id = (int) ($criteria['user_id'] ?? 0);
+        if(!$user_id) {
+            return null;
+        }
+
+        /* 1. Explicit invoice target (e.g. from payment redirect or explicit criteria) */
+        $target_invoice_id = !empty($criteria['invoice_id']) ? (int) $criteria['invoice_id'] : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null);
+        if($target_invoice_id) {
+            $explicit_invoice = db()
+                ->where('invoice_id', $target_invoice_id)
+                ->where('user_id', $user_id)
+                ->getOne('invoices');
+
+            if($explicit_invoice && $explicit_invoice->status !== 'paid') {
+                return $explicit_invoice;
+            }
+        }
+
+        /* 2. Retrieve unpaid candidate invoices for this user */
+        $candidates = db()
+            ->where('user_id', $user_id)
+            ->where('status', 'paid', '!=')
+            ->orderBy('invoice_id', 'DESC')
+            ->get('invoices');
+
+        if(empty($candidates)) {
+            return null;
+        }
+
+        $subscription_id = !empty($criteria['subscription_id']) ? (int) $criteria['subscription_id'] : 0;
+        $plan_id = !empty($criteria['plan_id']) ? (string) $criteria['plan_id'] : '';
+        $frequency = !empty($criteria['payment_frequency']) ? (string) $criteria['payment_frequency'] : (!empty($criteria['frequency']) ? (string) $criteria['frequency'] : '');
+        $currency = !empty($criteria['payment_currency']) ? strtoupper((string) $criteria['payment_currency']) : (!empty($criteria['currency']) ? strtoupper((string) $criteria['currency']) : '');
+        $total_amount = isset($criteria['payment_total']) ? (float) $criteria['payment_total'] : (isset($criteria['total_amount']) ? (float) $criteria['total_amount'] : (isset($criteria['base_amount']) ? (float) $criteria['base_amount'] : 0.0));
+        $payment_datetime = $criteria['payment_datetime'] ?? get_date();
+        $period_start = $criteria['period_start'] ?? null;
+        $target_timestamp = strtotime($period_start ?: $payment_datetime);
+
+        $best_candidate = null;
+        $best_score = -1;
+
+        foreach($candidates as $candidate) {
+            if(in_array($candidate->status, ['paid', 'canceled', 'uncollectible', 'void'], true)) {
+                continue;
+            }
+
+            $score = 0;
+            $metadata = json_decode($candidate->metadata ?? '{}', true) ?: [];
+
+            /* Proforma status / type / processor markers */
+            $is_proforma = (
+                $candidate->processor === 'proforma'
+                || $candidate->type === 'proforma'
+                || !empty($metadata['proforma'])
+                || strpos((string) ($candidate->external_payment_id ?? ''), 'proforma_') === 0
+            );
+
+            if($is_proforma) {
+                $score += 100;
+            }
+
+            /* Subscription ID match */
+            if($subscription_id && (int) $candidate->subscription_id === $subscription_id) {
+                $score += 150;
+            } elseif(!$candidate->subscription_id) {
+                $score += 20;
+            }
+
+            /* Plan ID match */
+            if($plan_id && (string) $candidate->plan_id === (string) $plan_id) {
+                $score += 100;
+            }
+
+            /* Currency and Amount match */
+            $cand_currency = strtoupper((string) $candidate->currency);
+            $cand_total = (float) $candidate->total_amount;
+
+            if($currency && $cand_currency === $currency) {
+                $score += 60;
+
+                if($total_amount > 0 && $cand_total > 0) {
+                    $diff = abs($cand_total - $total_amount);
+                    if($diff < 0.01) {
+                        $score += 150;
+                    } elseif($diff / max($cand_total, $total_amount) <= 0.05) {
+                        $score += 70;
+                    }
+                }
+            } else {
+                $cand_total_def = (float) ($candidate->total_amount_default_currency ?? 0);
+                $pay_total_def = (float) ($criteria['total_amount_default_currency'] ?? 0);
+                if($cand_total_def > 0 && $pay_total_def > 0 && abs($cand_total_def - $pay_total_def) < 0.05) {
+                    $score += 90;
+                }
+            }
+
+            /* Payment frequency match */
+            if($frequency && !empty($candidate->frequency) && $candidate->frequency === $frequency) {
+                $score += 60;
+            }
+
+            /* Date proximity */
+            $cand_date_str = !empty($candidate->due_datetime) ? $candidate->due_datetime : (!empty($metadata['period_start']) ? $metadata['period_start'] : $candidate->datetime);
+            $cand_timestamp = $cand_date_str ? strtotime($cand_date_str) : null;
+
+            if($target_timestamp && $cand_timestamp) {
+                $days_diff = abs($target_timestamp - $cand_timestamp) / 86400;
+                if($days_diff <= 7) {
+                    $score += 60;
+                } elseif($days_diff <= 31) {
+                    $score += 35;
+                } elseif($days_diff <= 60) {
+                    $score += 15;
+                }
+            }
+
+            /* Recency tie-breaker */
+            $score += min(5, (int) $candidate->invoice_id / 100000);
+
+            if($score > $best_score) {
+                $best_score = $score;
+                $best_candidate = $candidate;
+            }
+        }
+
+        if($best_score >= 120 && $best_candidate) {
+            return $best_candidate;
+        }
+
+        return null;
+    }
+
+    public function mark_proforma_invoice_as_paid($invoice_id, array $data) {
+        $this->ensure_schema();
+
+        $invoice = db()->where('invoice_id', (int) $invoice_id)->getOne('invoices');
+        if(!$invoice) {
+            return false;
+        }
+
+        $external_payment_id = (string) ($data['external_payment_id'] ?? '');
+        $date = $this->normalize_datetime($data['invoice_datetime'] ?? ($data['payment_datetime'] ?? null)) ?? get_date();
+        $paid_datetime = $this->normalize_datetime($data['paid_datetime'] ?? ($data['payment_datetime'] ?? null)) ?? $date;
+        $due_datetime = $this->normalize_datetime($data['due_datetime'] ?? ($data['period_start'] ?? null)) ?? ($invoice->due_datetime ?? $date);
+        $period_start = $this->normalize_datetime($data['period_start'] ?? null);
+        $period_end = $this->normalize_datetime($data['period_end'] ?? null);
+
+        if(!$period_start && $paid_datetime) {
+            $period_start = $paid_datetime;
+        }
+
+        $payment_frequency = $data['payment_frequency'] ?? ($invoice->frequency ?: 'monthly');
+        if(!$period_end && $period_start && !empty($payment_frequency)) {
+            $period_end = $this->calculate_period_end($period_start, $payment_frequency);
+        }
+
+        $subtotal = $this->decimal($data['base_amount'] ?? ($data['payment_total'] ?? $invoice->subtotal_amount));
+        $discount = $this->decimal($data['discount_amount'] ?? ($invoice->discount_amount ?? 0));
+        $total = $this->decimal($data['payment_total'] ?? $invoice->total_amount);
+        $currency = $data['payment_currency'] ?? $invoice->currency;
+
+        $total_amount_default_currency = $this->get_total_amount_default_currency(
+            $total,
+            $currency,
+            $data['total_amount_default_currency'] ?? null
+        );
+
+        $tax = max(0, $total - max(0, $subtotal - $discount));
+
+        $metadata = json_decode($invoice->metadata ?? '{}', true) ?: [];
+        if(isset($data['metadata']) && is_array($data['metadata'])) {
+            $metadata = array_merge($metadata, $data['metadata']);
+        }
+
+        $metadata['proforma'] = false;
+        $metadata['was_proforma'] = true;
+        $metadata['matched_on_payment'] = true;
+        $metadata['matched_datetime'] = get_date();
+        if($period_start) {
+            $metadata['period_start'] = $period_start;
+        }
+        if($period_end) {
+            $metadata['period_end'] = $period_end;
+        }
+        if(!empty($data['code'])) {
+            $metadata['code'] = $data['code'];
+        }
+        if(!empty($data['confirmation_message'])) {
+            $metadata['confirmation_message'] = $data['confirmation_message'];
+        }
+
+        $business = json_decode($data['business'] ?? '');
+        if(!$business && !empty($invoice->business)) {
+            $business = json_decode($invoice->business);
+        }
+        if(!$business) {
+            $business = json_decode(json_encode(settings()->business));
+        }
+        $this->normalize_invoice_prefix($business);
+
+        $subscription_id = !empty($data['subscription_id']) ? (int) $data['subscription_id'] : (int) $invoice->subscription_id;
+
+        $payment_processor = $data['payment_processor'] ?? ($invoice->processor === 'proforma' ? 'offline_payment' : $invoice->processor);
+        $payment_type = $data['payment_type'] ?? ($invoice->type === 'proforma' ? 'one_time' : $invoice->type);
+
+        $update_data = [
+            'subscription_id' => $subscription_id ?: null,
+            'payment_id' => $data['local_payment_id'] ?? $invoice->payment_id,
+            'status' => 'paid',
+            'processor' => $payment_processor,
+            'type' => $payment_type,
+            'frequency' => $payment_frequency,
+            'code' => $data['code'] ?? $invoice->code,
+            'taxes_ids' => $data['taxes_ids'] ?? $invoice->taxes_ids,
+            'subtotal_amount' => $subtotal,
+            'discount_amount' => $discount,
+            'tax_amount' => $this->decimal($tax),
+            'total_amount' => $total,
+            'total_amount_default_currency' => $total_amount_default_currency,
+            'currency' => $currency,
+            'paid_datetime' => $paid_datetime,
+            'metadata' => json_encode($metadata),
+        ];
+
+        if($external_payment_id) {
+            $update_data['external_payment_id'] = $external_payment_id;
+        }
+        if(!empty($data['billing'])) {
+            $update_data['billing'] = $data['billing'];
+        }
+        if($business) {
+            $update_data['business'] = json_encode($business);
+        }
+        if($due_datetime) {
+            $update_data['due_datetime'] = $due_datetime;
+        }
+
+        db()->where('invoice_id', (int) $invoice_id)->update('invoices', $update_data);
+
+        /* Update or insert invoice item */
+        $existing_item = db()->where('invoice_id', (int) $invoice_id)->getOne('invoice_items');
+        $item_metadata = json_encode(array_filter([
+            'period_start' => $period_start,
+            'period_end' => $period_end,
+        ]));
+
+        if($existing_item) {
+            db()->where('invoice_item_id', $existing_item->invoice_item_id)->update('invoice_items', [
+                'description' => $data['plan_name'] ?? $existing_item->description,
+                'unit_amount' => $subtotal,
+                'total_amount' => $subtotal,
+                'currency' => $currency,
+                'metadata' => $item_metadata,
+                'datetime' => $paid_datetime,
+            ]);
+        } else {
+            db()->insert('invoice_items', [
+                'invoice_id' => (int) $invoice_id,
+                'item_type' => 'plan',
+                'description' => $data['plan_name'] ?? null,
+                'quantity' => 1,
+                'unit_amount' => $subtotal,
+                'total_amount' => $subtotal,
+                'currency' => $currency,
+                'metadata' => $item_metadata,
+                'datetime' => $paid_datetime,
+            ]);
+        }
+
+        $this->log_event('subscription.invoice_paid', [
+            'subscription_id' => $subscription_id,
+            'invoice_id' => (int) $invoice_id,
+            'user_id' => (int) $invoice->user_id,
+            'source' => $payment_processor,
+            'payload' => [
+                'matched_proforma' => true,
+                'previous_status' => $invoice->status,
+                'previous_processor' => $invoice->processor,
+                'payment_id' => $data['local_payment_id'] ?? null,
+                'total_amount' => $total,
+            ],
+        ]);
+
+        return (int) $invoice_id;
+    }
+
     public function create_paid_invoice($subscription_id, array $data) {
         $this->ensure_schema();
 
@@ -512,6 +801,19 @@ class Subscription extends Model {
 
             if($existing_invoice) {
                 return (int) $existing_invoice->invoice_id;
+            }
+        }
+
+        /* Match the most qualified existing proforma/unpaid invoice */
+        $matching_criteria = array_merge($data, [
+            'subscription_id' => $subscription_id,
+        ]);
+        $qualified_proforma = $this->find_most_qualified_proforma_invoice($matching_criteria);
+
+        if($qualified_proforma) {
+            $invoice_id = $this->mark_proforma_invoice_as_paid($qualified_proforma->invoice_id, $matching_criteria);
+            if($invoice_id) {
+                return (int) $invoice_id;
             }
         }
 
@@ -1222,35 +1524,48 @@ class Subscription extends Model {
             'datetime' => $payment_datetime,
         ]);
 
-        /* Look for an existing pending/proforma invoice for this subscription */
-        $pending_invoice = db()
-            ->where('subscription_id', $subscription->subscription_id)
-            ->where('status', 'paid', '!=')
-            ->orderBy('invoice_id', 'DESC')
-            ->getOne('invoices');
+        /* Match the most qualified existing proforma/pending invoice for this subscription */
+        $qualified_proforma = $this->find_most_qualified_proforma_invoice([
+            'subscription_id' => $subscription->subscription_id,
+            'user_id' => $subscription->user_id,
+            'plan_id' => $subscription->plan_id,
+            'payment_frequency' => $frequency,
+            'payment_total' => $price,
+            'total_amount_default_currency' => $total_amount_default_currency,
+            'payment_currency' => $currency,
+            'payment_datetime' => $payment_datetime,
+            'period_start' => $period_start,
+            'period_end' => $period_end,
+        ]);
 
-        if($pending_invoice) {
-            $invoice_id = (int) $pending_invoice->invoice_id;
-            $inv_metadata = json_decode($pending_invoice->metadata ?? '{}', true) ?: [];
-            $inv_metadata['manual_period'] = true;
-            $inv_metadata['period_start'] = $period_start;
-            $inv_metadata['period_end'] = $period_end;
-            if($code) $inv_metadata['code'] = $code;
-            if($confirmation_message) $inv_metadata['confirmation_message'] = $confirmation_message;
-
-            db()->where('invoice_id', $invoice_id)->update('invoices', [
-                'payment_id' => $payment_id,
-                'status' => 'paid',
-                'processor' => 'offline_payment',
+        if($qualified_proforma) {
+            $invoice_id = $this->mark_proforma_invoice_as_paid($qualified_proforma->invoice_id, [
+                'subscription_id' => $subscription->subscription_id,
+                'local_payment_id' => $payment_id,
                 'external_payment_id' => $payment_unique_id,
-                'frequency' => $frequency,
-                'code' => $code ?: null,
-                'total_amount' => $price,
+                'payment_processor' => 'offline_payment',
+                'payment_total' => $price,
                 'total_amount_default_currency' => $total_amount_default_currency,
-                'currency' => $currency,
-                'paid_datetime' => $payment_datetime,
-                'datetime' => $payment_datetime,
-                'metadata' => json_encode($inv_metadata),
+                'payment_currency' => $currency,
+                'payment_datetime' => $payment_datetime,
+                'user_id' => $subscription->user_id,
+                'plan_id' => $subscription->plan_id,
+                'plan_name' => $plan->name ?? null,
+                'payment_frequency' => $frequency,
+                'code' => $code ?: null,
+                'discount_amount' => 0,
+                'base_amount' => $price,
+                'taxes_ids' => $plan->taxes_ids ?? null,
+                'payment_type' => 'one_time',
+                'period_start' => $period_start,
+                'period_end' => $period_end,
+                'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
+                'business' => json_encode(settings()->business),
+                'confirmation_message' => $confirmation_message,
+                'metadata' => array_merge($subscription_metadata, [
+                    'manual_period' => true,
+                    'confirmation_message' => $confirmation_message,
+                ]),
             ]);
         } else {
             $invoice_id = $this->create_paid_invoice($subscription->subscription_id, [

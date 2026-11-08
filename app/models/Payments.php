@@ -20,7 +20,7 @@ defined('ALTUMCODE') || die();
 
 class Payments extends Model {
 
-    public function webhook_process_payment($payment_processor, $external_payment_id, $payment_total, $payment_currency, $user_id, $plan_id, $payment_frequency, $code, $discount_amount, $base_amount, $taxes_ids, $payment_type, $payment_subscription_id, $payer_email, $payer_name) {
+    public function webhook_process_payment($payment_processor, $external_payment_id, $payment_total, $payment_currency, $user_id, $plan_id, $payment_frequency, $code, $discount_amount, $base_amount, $taxes_ids, $payment_type, $payment_subscription_id, $payer_email, $payer_name, $extra_data = []) {
         /* Get the plan details */
         $plan = db()->where('plan_id', $plan_id)->getOne('plans');
 
@@ -127,6 +127,7 @@ class Payments extends Model {
                 'period_end' => $plan_expiration_date,
                 'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
                 'business' => json_encode(settings()->business),
+                'invoice_id' => !empty($extra_data['invoice_id']) ? (int) $extra_data['invoice_id'] : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null),
             ]);
         } catch(\Exception $exception) {
             if(DEBUG) {

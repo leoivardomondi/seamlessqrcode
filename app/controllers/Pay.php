@@ -1163,6 +1163,7 @@ class Pay extends Controller {
                     'period_end' => $plan_expiration_date,
                     'billing' => settings()->payment->taxes_and_billing_is_enabled && $this->user->billing ? json_encode($this->user->billing) : null,
                     'business' => json_encode(settings()->business),
+                    'invoice_id' => !empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null,
                 ]);
             } catch(\Exception $exception) {
                 if(DEBUG) error_log($exception->getMessage());
@@ -1171,10 +1172,19 @@ class Pay extends Controller {
             /* Update proforma invoice if paying for an existing proforma */
             $proforma_invoice_id = isset($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null;
             if($proforma_invoice_id) {
-                db()->where('invoice_id', $proforma_invoice_id)->update('invoices', [
-                    'status' => 'paid',
-                    'paid_datetime' => $payment_datetime,
-                    'payment_id' => $payment_id,
+                $subscription_model->mark_proforma_invoice_as_paid($proforma_invoice_id, [
+                    'local_payment_id' => $payment_id,
+                    'external_payment_id' => $external_payment_id,
+                    'payment_processor' => 'offline_payment',
+                    'payment_total' => $formatted_price,
+                    'payment_currency' => currency(),
+                    'payment_datetime' => $payment_datetime,
+                    'user_id' => $this->user->user_id,
+                    'plan_id' => $this->plan_id,
+                    'plan_name' => $plan->name,
+                    'payment_frequency' => $_POST['payment_frequency'],
+                    'period_start' => $renewal_period['period_start'],
+                    'period_end' => $plan_expiration_date,
                 ]);
             }
 
@@ -1488,7 +1498,8 @@ class Pay extends Controller {
                         'base_amount' => $base_amount,
                         'code' => $code,
                         'discount_amount' => $discount_amount,
-                        'taxes_ids' => json_encode($this->applied_taxes_ids)
+                        'taxes_ids' => json_encode($this->applied_taxes_ids),
+                        'invoice_id' => !empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null,
                     ],
                     'callback_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount))
                 ];
@@ -1590,7 +1601,8 @@ class Pay extends Controller {
                         'base_amount' => $base_amount,
                         'code' => $code,
                         'discount_amount' => $discount_amount,
-                        'taxes_ids' => json_encode($this->applied_taxes_ids)
+                        'taxes_ids' => json_encode($this->applied_taxes_ids),
+                        'invoice_id' => !empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null,
                     ],
                     'callback_url' => url('pay/' . $this->plan_id . $this->return_url_parameters('success', $base_amount, $formatted_price, $code, $discount_amount))
                 ];
