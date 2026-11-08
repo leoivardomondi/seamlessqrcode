@@ -186,11 +186,11 @@ class AdminQrCodes extends Controller {
             redirect('admin/qr-codes');
         }
 
-        if(!$current_user = db()->where('user_id', $qr_code->user_id)->getOne('users', ['user_id', 'email'])) {
+        if(!$current_user = db()->where('user_id', $qr_code->user_id)->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code'])) {
             redirect('admin/qr-codes');
         }
 
-        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email'])) {
+        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code'])) {
             redirect('admin/qr-codes');
         }
 
@@ -200,6 +200,19 @@ class AdminQrCodes extends Controller {
             db()->where('qr_code_id', $qr_code->qr_code_id)->update('qr_codes', [
                 'user_id' => $new_user->user_id,
             ]);
+
+            /* Notify recipient, sender, and admin */
+            send_resource_transfer_notifications(
+                'qr_code',
+                $qr_code->name,
+                $current_user,
+                $new_user,
+                [
+                    'resource_link' => url('qr-codes'),
+                    'admin_resource_link' => url('admin/qr-codes'),
+                    'initiated_by' => 'Administrator (' . $this->user->email . ')',
+                ]
+            );
 
             /* Set a nice success message */
             Alerts::add_success(sprintf(l('transfer_modal.success_message'), '<strong>' . input_clean($qr_code->name) . '</strong>', '<strong>' . input_clean($current_user->email) . '</strong>', '<strong>' . input_clean($new_user->email) . '</strong>'));

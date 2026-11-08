@@ -162,11 +162,11 @@ class AdminLinks extends Controller {
             redirect('admin/links');
         }
 
-        if(!$current_user = db()->where('user_id', $link->user_id)->getOne('users', ['user_id', 'email'])) {
+        if(!$current_user = db()->where('user_id', $link->user_id)->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code'])) {
             redirect('admin/links');
         }
 
-        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email'])) {
+        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code'])) {
             redirect('admin/links');
         }
 
@@ -177,6 +177,19 @@ class AdminLinks extends Controller {
             db()->where('link_id', $link->link_id)->update('biolinks_blocks', ['user_id' => $new_user->user_id]);
             db()->where('link_id', $link->link_id)->update('data', ['user_id' => $new_user->user_id]);
             db()->where('link_id', $link->link_id)->update('track_links', ['user_id' => $new_user->user_id]);
+
+            /* Notify recipient, sender, and admin */
+            send_resource_transfer_notifications(
+                'link',
+                $link->url,
+                $current_user,
+                $new_user,
+                [
+                    'resource_link' => url('links'),
+                    'admin_resource_link' => url('admin/links'),
+                    'initiated_by' => 'Administrator (' . $this->user->email . ')',
+                ]
+            );
 
             /* Set a nice success message */
             Alerts::add_success(sprintf(l('transfer_modal.success_message'), '<strong>' . input_clean($link->url) . '</strong>', '<strong>' . input_clean($current_user->email) . '</strong>', '<strong>' . input_clean($new_user->email) . '</strong>'));

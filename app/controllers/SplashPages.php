@@ -200,11 +200,11 @@ class SplashPages extends Controller {
             redirect('splash-pages');
         }
 
-        if(!$current_user = db()->where('user_id', $splash_page->user_id)->getOne('users', ['user_id', 'email'])) {
+        if(!$current_user = db()->where('user_id', $splash_page->user_id)->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code'])) {
             redirect('splash-pages');
         }
 
-        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email', 'status', 'plan_settings'])) {
+        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code', 'status', 'plan_settings'])) {
             Alerts::add_error(l('transfer_modal.error_message.email_not_found'));
         }
 
@@ -224,6 +224,19 @@ class SplashPages extends Controller {
             db()->where('splash_page_id', $splash_page->splash_page_id)->where('user_id', $current_user->user_id)->update('links', [
                 'splash_page_id' => null,
             ]);
+
+            /* Notify recipient, sender, and admin */
+            send_resource_transfer_notifications(
+                'splash_page',
+                $splash_page->name,
+                $current_user,
+                $new_user,
+                [
+                    'resource_link' => url('splash-pages'),
+                    'admin_resource_link' => url('admin/splash-pages'),
+                    'initiated_by' => ($this->user->name ?: $this->user->email) . ' (' . $this->user->email . ')',
+                ]
+            );
 
             /* Set a nice success message */
             Alerts::add_success(sprintf(l('transfer_modal.success_message'), '<strong>' . input_clean($splash_page->name) . '</strong>', '<strong>' . input_clean($current_user->email) . '</strong>', '<strong>' . input_clean($new_user->email) . '</strong>'));

@@ -257,4 +257,74 @@ class QrCodes extends Controller {
         redirect('qr-codes');
     }
 
+    public function transfer() {
+        \Altum\Authentication::guard();
+
+        /* Team checks */
+        if(\Altum\Teams::is_delegated() && !\Altum\Teams::has_access('update.qr_codes')) {
+            Alerts::add_info(l('global.info_message.team_no_access'));
+            redirect('qr-codes');
+        }
+
+        if(empty($_POST)) {
+            redirect('qr-codes');
+        }
+
+        $qr_code_id = (int) $_POST['qr_code_id'];
+        $_POST['email'] = input_clean_email($_POST['email'] ?? '');
+
+        if(!\Altum\Csrf::check()) {
+            Alerts::add_error(l('global.error_message.invalid_csrf_token'));
+        }
+
+        if(!$qr_code = db()->where('qr_code_id', $qr_code_id)->where('user_id', $this->user->user_id)->getOne('qr_codes', ['qr_code_id', 'user_id', 'name'])) {
+            redirect('qr-codes');
+        }
+
+        if(!$current_user = db()->where('user_id', $qr_code->user_id)->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code'])) {
+            redirect('qr-codes');
+        }
+
+        if(!$new_user = db()->where('email', $_POST['email'])->getOne('users', ['user_id', 'email', 'name', 'language', 'anti_phishing_code', 'status', 'plan_settings'])) {
+            Alerts::add_error(l('transfer_modal.error_message.email_not_found'));
+        }
+
+        if(!empty($new_user) && $current_user->user_id == $new_user->user_id) {
+            Alerts::add_error(l('transfer_modal.error_message.self_transfer'));
+        }
+
+        if(!Alerts::has_field_errors() && !Alerts::has_errors()) {
+
+            /* Update the database */
+            db()->where('qr_code_id', $qr_code->qr_code_id)->update('qr_codes', [
+                'user_id' => $new_user->user_id,
+                'last_datetime' => get_date(),
+            ]);
+
+            /* Notify recipient, sender, and admin */
+            send_resource_transfer_notifications(
+                'qr_code',
+                $qr_code->name,
+                $current_user,
+                $new_user,
+                [
+                    'resource_link' => url('qr-codes'),
+                    'admin_resource_link' => url('admin/qr-codes'),
+                    'initiated_by' => ($this->user->name ?: $this->user->email) . ' (' . $this->user->email . ')',
+                ]
+            );
+
+            /* Set a nice success message */
+            Alerts::add_success(sprintf(l('transfer_modal.success_message'), '<strong>' . input_clean($qr_code->name) . '</strong>', '<strong>' . input_clean($current_user->email) . '</strong>', '<strong>' . input_clean($new_user->email) . '</strong>'));
+
+            /* Clear the cache */
+            cache()->deleteItemsByTag('user_id=' . $current_user->user_id);
+            cache()->deleteItemsByTag('user_id=' . $new_user->user_id);
+
+            redirect('qr-codes');
+        }
+
+        redirect('qr-codes');
+    }
+
 }
