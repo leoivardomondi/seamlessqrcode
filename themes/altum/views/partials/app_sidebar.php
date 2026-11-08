@@ -1,7 +1,7 @@
 <?php defined('ALTUMCODE') || die() ?>
 
 <div class="app-sidebar">
-    <div class="app-sidebar-title text-truncate">
+    <div class="app-sidebar-title text-truncate d-flex align-items-center justify-content-between">
         <a
                 href="<?= url() ?>"
                 data-logo
@@ -18,6 +18,10 @@
                 <?= settings()->main->title ?>
             <?php endif ?>
         </a>
+
+        <button type="button" id="app_sidebar_collapse" class="btn btn-sm btn-link text-muted p-1 ml-auto app-sidebar-collapse-btn d-none d-lg-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
+            <i class="fas fa-fw fa-bars"></i>
+        </button>
     </div>
 
     <div class="app-sidebar-links-wrapper flex-grow-1">

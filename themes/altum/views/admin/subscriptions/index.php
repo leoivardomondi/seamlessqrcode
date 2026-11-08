@@ -140,52 +140,44 @@ $get_default_currency_mrr = function($row) {
 
 <?= \Altum\Alerts::output_alerts() ?>
 
-<div class="row mb-4">
-    <div class="col-6 col-xl-2 mb-3">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="text-muted small"><?= l('subscription_status.active') ?></div>
-                <div class="h4 mb-0"><?= nr($data->stats['active'] ?? 0) ?></div>
+<div class="admin-stats-grid mb-4">
+    <div class="card h-100 admin-stat-card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.active') ?></div>
+            <div class="admin-stat-card-value"><?= nr($data->stats['active'] ?? 0) ?></div>
+        </div>
+    </div>
+    <div class="card h-100 admin-stat-card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.past_due') ?></div>
+            <div class="admin-stat-card-value"><?= nr($data->stats['past_due'] ?? 0) ?></div>
+        </div>
+    </div>
+    <div class="card h-100 admin-stat-card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.paused') ?></div>
+            <div class="admin-stat-card-value"><?= nr($data->stats['paused'] ?? 0) ?></div>
+        </div>
+    </div>
+    <div class="card h-100 admin-stat-card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <div class="admin-stat-card-title text-muted"><?= l('subscription_status.non_renewing') ?></div>
+            <div class="admin-stat-card-value"><?= nr($data->stats['non_renewing'] ?? 0) ?></div>
+        </div>
+    </div>
+    <div class="card h-100 admin-stat-card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <div class="admin-stat-card-title text-muted"><?= l('admin_subscriptions.mrr') ?></div>
+            <div class="admin-stat-card-value">
+                <?= nr($data->mrr, 2) ?> <span class="admin-stat-card-currency"><?= settings()->payment->default_currency ?></span>
             </div>
         </div>
     </div>
-    <div class="col-6 col-xl-2 mb-3">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="text-muted small"><?= l('subscription_status.past_due') ?></div>
-                <div class="h4 mb-0"><?= nr($data->stats['past_due'] ?? 0) ?></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-2 mb-3">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="text-muted small"><?= l('subscription_status.paused') ?></div>
-                <div class="h4 mb-0"><?= nr($data->stats['paused'] ?? 0) ?></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-2 mb-3">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="text-muted small"><?= l('subscription_status.non_renewing') ?></div>
-                <div class="h4 mb-0"><?= nr($data->stats['non_renewing'] ?? 0) ?></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-2 mb-3">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="text-muted small"><?= l('admin_subscriptions.mrr') ?></div>
-                <div class="h4 mb-0"><?= nr($data->mrr, 2) ?> <?= settings()->payment->default_currency ?></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-2 mb-3">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="text-muted small"><?= l('admin_subscriptions.arr') ?></div>
-                <div class="h4 mb-0"><?= nr($data->arr, 2) ?> <?= settings()->payment->default_currency ?></div>
+    <div class="card h-100 admin-stat-card border-0 shadow-sm">
+        <div class="card-body p-3">
+            <div class="admin-stat-card-title text-muted"><?= l('admin_subscriptions.arr') ?></div>
+            <div class="admin-stat-card-value">
+                <?= nr($data->arr, 2) ?> <span class="admin-stat-card-currency"><?= settings()->payment->default_currency ?></span>
             </div>
         </div>
     </div>

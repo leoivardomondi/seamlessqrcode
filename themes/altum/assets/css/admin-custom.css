@@ -15,7 +15,7 @@ body {
     min-width: 275px;
     max-width: 275px;
     margin-left: -350px;
-    transition: margin .15s linear;
+    transition: margin .15s linear, min-width .2s ease, max-width .2s ease, width .2s ease;
     position: fixed;
     top: 0;
     bottom: 0;
@@ -177,6 +177,7 @@ body.admin-sidebar-opened .admin-sidebar {
     overflow: auto;
     margin-left: 0;
     position: relative;
+    transition: margin-left .2s ease, margin-right .2s ease;
 }
 
 [dir="rtl"] .admin-content {
@@ -192,6 +193,181 @@ body.admin-sidebar-opened .admin-sidebar {
         margin-left: initial;
         margin-right: calc(275px + 1.5rem);
     }
+}
+
+/* Squeezed / Collapsed Admin Sidebar state (Desktop & Laptops) */
+@media (min-width: 992px) {
+    body.admin-sidebar-collapsed .admin-sidebar {
+        min-width: 75px !important;
+        max-width: 75px !important;
+        width: 75px !important;
+    }
+
+    body.admin-sidebar-collapsed .admin-content {
+        margin-left: calc(75px + 1.5rem) !important;
+    }
+
+    [dir="rtl"] body.admin-sidebar-collapsed .admin-content {
+        margin-left: initial !important;
+        margin-right: calc(75px + 1.5rem) !important;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-title {
+        justify-content: center !important;
+        padding: 0 0.25rem;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-title #sidebar_title {
+        display: none !important;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-collapse-btn {
+        margin-left: 0 !important;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links-wrapper {
+        padding: 1rem 0.4rem;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links li > a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.65rem 0;
+        font-size: 0 !important;
+        text-align: center;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links li > a > i,
+    body.admin-sidebar-collapsed .admin-sidebar-links li > a > svg {
+        margin-right: 0 !important;
+        font-size: 1.15rem !important;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links li > a .badge {
+        position: absolute;
+        top: 2px;
+        right: 4px;
+        font-size: 0.65rem;
+        padding: 0.15rem 0.35rem;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links > .divider-wrapper {
+        padding: 0;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links > .divider-wrapper > .divider {
+        margin: 0.5rem 0;
+    }
+
+    body.admin-sidebar-collapsed .admin-sidebar-links li.dropdown .dropdown-menu {
+        left: 80px !important;
+        top: 0 !important;
+    }
+}
+
+/* Responsive stats cards grid for laptops (13.3", 14", 15") and desktops */
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1600px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+.admin-stat-card {
+    min-width: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-stat-card .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.admin-stat-card-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-stat-card-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-stat-card-currency {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    margin-left: 0.25rem;
+}
+
+@media (max-width: 1400px) {
+    .admin-stat-card-value {
+        font-size: 1.2rem;
+    }
+}
+
+/* Top synchronized scrollbar for responsive tables */
+.table-top-scrollbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    height: 12px;
+    margin-bottom: 0.35rem;
+    display: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-top-scrollbar-inner {
+    height: 12px;
+}
+
+.table-top-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+.table-top-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+.table-top-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+}
+.table-top-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme-style="dark"] .table-top-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+[data-theme-style="dark"] .table-top-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+}
+[data-theme-style="dark"] .table-top-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.45);
 }
 
 .admin-navbar-logo {

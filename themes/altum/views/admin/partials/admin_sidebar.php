@@ -33,6 +33,10 @@
                 <div class="admin-navbar-brand text-truncate"><?= settings()->main->title ?></div>
             <?php endif ?>
         </div>
+
+        <button type="button" id="admin_sidebar_collapse" class="btn btn-sm btn-link text-muted p-1 ml-auto admin-sidebar-collapse-btn d-none d-lg-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
+            <i class="fas fa-fw fa-bars"></i>
+        </button>
     </div>
 
     <div class="admin-sidebar-links-wrapper">

@@ -35,6 +35,11 @@
 </head>
 
 <body class="<?= l('direction') == 'rtl' ? 'rtl' : null ?>" data-theme-style="<?= \Altum\ThemeStyle::get() ?>">
+<script>
+    if(localStorage.getItem('admin_sidebar_collapsed') === 'true') {
+        document.body.classList.add('admin-sidebar-collapsed');
+    }
+</script>
 <div id="admin_overlay" class="admin-overlay" style="display: none"></div>
 <?php if(settings()->main->admin_spotlight_is_enabled || settings()->main->user_spotlight_is_enabled) require THEME_PATH . 'views/partials/spotlight.php' ?>
 <?php require THEME_PATH . 'views/partials/pwa_install.php' ?>
