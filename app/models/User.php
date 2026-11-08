@@ -85,7 +85,7 @@ class User extends Model {
 
     }
 
-    /* Enforce that deactivated users or users with prior subscriptions/payments do not have trial option */
+    /* Enforce that deactivated users or users with prior subscriptions/payments/invoices do not have trial option */
     public function check_and_enforce_trial_eligibility($user) {
         if(!$user) {
             return false;
@@ -98,18 +98,17 @@ class User extends Model {
         $user_id = (int) $user->user_id;
 
         $is_deactivated = (int) ($user->status ?? 1) !== 1;
-        $has_expired_plan = $user->plan_id == 'free' && !empty($user->plan_expiration_date) && strtotime($user->plan_expiration_date) < time() && strtotime($user->plan_expiration_date) > 0;
-        
-        $has_past_payment = false;
-        $has_past_subscription = false;
+        $has_paid_plan = !empty($user->plan_id) && $user->plan_id !== 'free';
+        $has_plan_expiration = !empty($user->plan_expiration_date) && $user->plan_expiration_date !== '0000-00-00 00:00:00';
+        $has_subscription = db()->where('user_id', $user_id)->has('subscriptions');
+        $has_payment = db()->where('user_id', $user_id)->has('payments');
+        $has_invoice = db()->where('user_id', $user_id)->has('invoices');
 
-        if(!$is_deactivated && !$has_expired_plan) {
-            $has_past_payment = db()->where('user_id', $user_id)->has('payments');
-            $has_past_subscription = db()->where('user_id', $user_id)->where('status', ['canceled', 'expired', 'past_due'], 'IN')->has('subscriptions');
-        }
-
-        if($is_deactivated || $has_expired_plan || $has_past_payment || $has_past_subscription) {
+        if($is_deactivated || $has_paid_plan || $has_plan_expiration || $has_subscription || $has_payment || $has_invoice) {
             $user->plan_trial_done = 1;
+            if(isset(\Altum\Authentication::$user) && (int) \Altum\Authentication::$user->user_id === $user_id) {
+                \Altum\Authentication::$user->plan_trial_done = 1;
+            }
             db()->where('user_id', $user_id)->update('users', ['plan_trial_done' => 1]);
             cache()->deleteItemsByTag('user_id=' . $user_id);
             return false;

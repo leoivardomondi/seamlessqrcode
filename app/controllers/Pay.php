@@ -47,6 +47,11 @@ class Pay extends Controller {
 
         (new \Altum\Models\User())->check_and_enforce_trial_eligibility($this->user);
 
+        /* If user is paying an invoice or has invoice_id in URL, force trial skip */
+        if(isset($_GET['invoice_id'])) {
+            $_GET['trial_skip'] = 'true';
+        }
+
         $payment_processors = require APP_PATH . 'includes/payment_processors.php';
 
         if(isset($_GET['currency'])) {

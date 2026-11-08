@@ -26,7 +26,7 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
     window.altum.annual_price = $('input[name="annual_price"]').val();
     window.altum.lifetime_price = $('input[name="lifetime_price"]').val();
     window.altum.code = null;
-    window.altum.allowed_trials = <?= settings()->payment->trial_require_card && $data->plan->trial_days && !$this->user->plan_trial_done && !isset($_GET['trial_skip']) ? json_encode(['stripe']) : json_encode([]) ?>;
+    window.altum.allowed_trials = <?= settings()->payment->trial_require_card && $data->plan->trial_days && !$this->user->plan_trial_done && !isset($_GET['trial_skip']) && !isset($_GET['invoice_id']) ? json_encode(['stripe']) : json_encode([]) ?>;
 
     window.altum.payment_type_one_time_enabled = <?= json_encode((bool) in_array(settings()->payment->type, ['one_time', 'both'])) ?>;
     window.altum.payment_type_recurring_enabled = <?= json_encode((bool) in_array(settings()->payment->type, ['recurring', 'both'])) ?>;
@@ -50,7 +50,7 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
         </nav>
     <?php endif ?>
 
-    <?php if(!settings()->payment->trial_require_card && $data->plan->trial_days && !$this->user->plan_trial_done && !isset($_GET['trial_skip'])): ?>
+    <?php if(!settings()->payment->trial_require_card && $data->plan->trial_days && !$this->user->plan_trial_done && !isset($_GET['trial_skip']) && !isset($_GET['invoice_id'])): ?>
         <div class="d-flex align-items-center mb-5">
             <h1 class="h3 m-0"><?= sprintf(l('pay.trial.header'), $data->plan->translations->{\Altum\Language::$name}->name ?? $data->plan->name) ?></h1>
 

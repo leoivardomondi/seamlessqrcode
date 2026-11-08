@@ -852,6 +852,7 @@ class Subscription extends Model {
             'payment_type' => 'one_time',
             'currency' => $currency,
             'invoice_id' => (int) $invoice_id,
+            'trial_skip' => 'true',
         ];
 
         if($processor) {

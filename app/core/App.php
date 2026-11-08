@@ -142,12 +142,15 @@ class App {
             if(!$user->plan || ($user->plan && ((new \DateTime()) > (new \DateTime($user->plan_expiration_date)) && $user->plan_id != 'free') || !$user->plan->status)) {
                 $user->plan_is_expired = true;
 
-                /* Switch the user to the default plan */
+                /* Switch the user to the default plan and mark trial done */
                 db()->where('user_id', $user->user_id)->update('users', [
                     'plan_id' => 'free',
                     'plan_settings' => json_encode(settings()->plan_free->settings),
-                    'payment_subscription_id' => ''
+                    'payment_subscription_id' => '',
+                    'plan_trial_done' => 1,
                 ]);
+
+                $user->plan_trial_done = 1;
 
                 /* Clear the cache */
                 cache()->deleteItemsByTag('user_id=' .  \Altum\Authentication::$user_id);
