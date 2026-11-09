@@ -39,13 +39,52 @@ class Pay extends Controller {
 
     public function index() {
 
-        \Altum\Authentication::guard();
+        $invoice_id = isset($_GET['invoice_id']) ? (int) $_GET['invoice_id'] : null;
+
+        if(!\Altum\Authentication::check()) {
+            if($invoice_id && ($invoice = db()->where('invoice_id', $invoice_id)->getOne('invoices'))) {
+                /* Public pay now link for invoice linked to customer email */
+                $customer_user = db()->where('user_id', $invoice->user_id)->getOne('users');
+                if($customer_user) {
+                    $customer_user->billing = json_decode($customer_user->billing ?? '');
+                    $customer_user->preferences = json_decode($customer_user->preferences ?? '');
+                    $customer_user->plan_trial_done = 1;
+                    $this->user = $customer_user;
+                } else {
+                    \Altum\Authentication::guard();
+                }
+            } else {
+                \Altum\Authentication::guard();
+            }
+        }
 
         if(!settings()->payment->is_enabled) {
             throw_404();
         }
 
         (new \Altum\Models\User())->check_and_enforce_trial_eligibility($this->user);
+
+        /* Ensure trial is never shown if user has ever had a subscription, paid plan, invoice, or payment */
+        $is_subscribed_user = (
+            !empty($this->user->plan_trial_done)
+            || ($this->user->plan_id != 'free')
+            || !empty($this->user->payment_processor)
+            || isset($_GET['trial_skip'])
+            || isset($_GET['invoice_id'])
+            || isset($_GET['subscription_id'])
+            || db()->where('user_id', $this->user->user_id)->has('subscriptions')
+            || db()->where('user_id', $this->user->user_id)->where('status', 1)->has('payments')
+            || db()->where('user_id', $this->user->user_id)->has('invoices')
+        );
+
+        if($is_subscribed_user) {
+            $this->user->plan_trial_done = 1;
+            $_GET['trial_skip'] = 'true';
+            if((int) ($this->user->plan_trial_done ?? 0) !== 1) {
+                db()->where('user_id', $this->user->user_id)->update('users', ['plan_trial_done' => 1]);
+                cache()->deleteItemsByTag('user_id=' . $this->user->user_id);
+            }
+        }
 
         /* If user is paying an invoice or has invoice_id in URL, force trial skip */
         if(isset($_GET['invoice_id'])) {
@@ -364,6 +403,31 @@ class Pay extends Controller {
         /* Set a custom title */
         Title::set(sprintf(l('pay.title'), ($this->plan->translations->{\Altum\Language::$name}->name ?? '') ?: $this->plan->name));
 
+        /* Prepare invoice message details if paying for an invoice */
+        $invoice_data = null;
+        if(!empty($_GET['invoice_id'])) {
+            $inv = db()->where('invoice_id', (int) $_GET['invoice_id'])->getOne('invoices');
+            if($inv) {
+                $inv_metadata = json_decode($inv->metadata ?? '{}', true) ?: [];
+                $sub = $inv->subscription_id ? db()->where('subscription_id', $inv->subscription_id)->getOne('subscriptions') : null;
+                $period_start = $inv_metadata['period_start'] ?? ($sub->current_period_end ?? $inv->datetime);
+                $freq = $inv->frequency ?: ($sub->frequency ?? 'monthly');
+                $period_end = $inv_metadata['period_end'] ?? (new \Altum\Models\Subscription())->calculate_period_end($period_start, $freq);
+                $invoice_data = [
+                    'invoice_id' => $inv->invoice_id,
+                    'invoice_number' => $inv->invoice_id,
+                    'amount' => $inv->total_amount,
+                    'currency' => $inv->currency,
+                    'email' => $this->user->email ?? null,
+                    'plan_name' => $this->plan->name ?? $inv->plan_id,
+                    'frequency' => $freq,
+                    'period_start' => $period_start,
+                    'period_end' => $period_end,
+                    'status' => $inv->status,
+                ];
+            }
+        }
+
         /* Prepare the view */
         $data = [
             'plan_id'           => $this->plan_id,
@@ -371,6 +435,7 @@ class Pay extends Controller {
             'plan_taxes'        => $this->plan_taxes,
             'payment_processors'=> $payment_processors,
             'payment_extra_data'=> $this->payment_extra_data,
+            'invoice_data'      => $invoice_data,
             'total_users'       => \Altum\Cache::cache_function_result('total_users', [], function() {
                 return db()->getValue('users', 'count(*)');
             })

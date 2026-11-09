@@ -2073,6 +2073,7 @@ return [
 	'admin_subscriptions.confirm.pause' => 'Pause this subscription locally?',
 	'admin_subscriptions.confirm.cancel' => 'Cancel this subscription? Gateway-backed subscriptions will be canceled through the processor first.',
 	'admin_subscriptions.error_message.manual_period_failed' => 'The manual renewal could not be applied. Check that this is not a lifetime subscription and that the selected plan price exists.',
+	'admin_subscriptions.error_message.manual_period_mpesa_required' => 'An invoice can only be marked as paid if an M-PESA confirmation message or transaction reference is provided.',
 	'admin_subscriptions.error_message.invoice_paid_datetime_failed' => 'The invoice paid date could not be updated.',
 	'admin_subscriptions.success_message.manual_period_applied' => 'Manual renewal of %1$s for %2$s was applied. Access now runs until %3$s.',
 	'admin_subscriptions.success_message.invoice_paid_datetime_updated' => 'The invoice paid date was updated successfully.',

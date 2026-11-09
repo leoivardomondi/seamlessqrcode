@@ -403,7 +403,70 @@ if(!empty($data->payment->period_start) && !empty($data->payment->period_end)) {
                     </table>
                 </div>
 
-                <?php if($this->user->billing->notes): ?>
+                <?php if($is_proforma_invoice && !$is_payment_paid): ?>
+                    <?php
+                    $is_kenyan_account = (
+                        strtoupper($data->payment->currency ?? '') === 'KES'
+                        || strtoupper($data->payment->billing->country ?? '') === 'KE'
+                        || strtolower($data->payment->billing->country ?? '') === 'kenya'
+                        || strtoupper($this->user->country ?? '') === 'KE'
+                        || strtolower($this->user->country ?? '') === 'kenya'
+                    );
+                    ?>
+
+                    <div class="mt-5 d-print-none">
+                        <h4 class="h6 font-weight-bold text-uppercase text-muted mb-3"><i class="fas fa-credit-card mr-1"></i> Payment Options</h4>
+
+                        <div class="row">
+                            <div class="col-12 <?= $is_kenyan_account ? 'col-md-6 mb-3 mb-md-0' : '' ?>">
+                                <div class="card h-100 border-primary bg-light">
+                                    <div class="card-body p-4 d-flex flex-column justify-content-between">
+                                        <div>
+                                            <span class="badge badge-primary mb-2">OPTION 1</span>
+                                            <h5 class="h6 font-weight-bold text-primary mb-2">Instant Online Payment</h5>
+                                            <p class="small text-muted mb-3">Pay securely online via M-PESA, Airtel Money, or Debit/Credit card. Your plan activates automatically immediately upon payment.</p>
+                                        </div>
+                                        <?php if(!empty($data->pay_now_url)): ?>
+                                            <div>
+                                                <a href="<?= $data->pay_now_url ?>" class="btn btn-block btn-success font-weight-bold"><i class="fas fa-bolt mr-1"></i> Pay now online (<?= nr($data->payment->total_amount, 2) . ' ' . $data->payment->currency ?>)</a>
+                                            </div>
+                                        <?php endif ?>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php if($is_kenyan_account): ?>
+                                <div class="col-12 col-md-6">
+                                    <div class="card h-100 border-success" style="background-color: #f0fdf4;">
+                                        <div class="card-body p-4 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <span class="badge badge-success mb-2">OPTION 2</span>
+                                                <h5 class="h6 font-weight-bold text-success mb-2">LIPA NA M-PESA PAYBILL</h5>
+                                                <div class="p-2 mb-2 bg-white rounded border">
+                                                    <div class="mb-1 small"><strong>PAY BILL NUMBER:</strong> <span class="badge badge-success px-2 py-1">522 522</span></div>
+                                                    <div class="small"><strong>ACCOUNT NUMBER:</strong> <span class="badge badge-dark px-2 py-1">1300866071</span></div>
+                                                </div>
+                                                <ol class="small text-muted pl-3 mb-0">
+                                                    <li>Go to M-PESA &gt; Lipa na M-PESA &gt; Pay Bill.</li>
+                                                    <li>Business No: <strong>522 522</strong> &bull; Acc No: <strong>1300866071</strong>.</li>
+                                                    <li>Enter amount <strong><?= nr($data->payment->total_amount, 2) . ' ' . $data->payment->currency ?></strong> and PIN.</li>
+                                                    <li>Click below to paste the SMS confirmation for instant activation.</li>
+                                                </ol>
+                                            </div>
+                                            <?php if(!empty($data->pay_now_url)): ?>
+                                                <div class="mt-3">
+                                                    <a href="<?= $data->pay_now_url . '&payment_processor=offline_payment' ?>" class="btn btn-block btn-outline-success btn-sm"><i class="fas fa-paste mr-1"></i> Paste confirmation SMS to activate</a>
+                                                </div>
+                                            <?php endif ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif ?>
+                        </div>
+                    </div>
+                <?php endif ?>
+
+                <?php if(!empty($this->user->billing->notes)): ?>
                     <div class="mt-6">
                         <table class="table invoice-table">
                             <thead>

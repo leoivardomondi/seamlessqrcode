@@ -50,6 +50,14 @@ if(!empty($data->pay_now_processor_label)) {
 }
 
 $offline_payment_instructions = trim(settings()->offline_payment->instructions ?? '');
+
+$is_kenyan_account = (
+    strtoupper($data->invoice->currency ?? '') === 'KES'
+    || strtoupper($customer_billing->country ?? '') === 'KE'
+    || strtolower($customer_billing->country ?? '') === 'kenya'
+    || strtoupper($data->subscription->user_country ?? '') === 'KE'
+    || strtolower($data->subscription->user_country ?? '') === 'kenya'
+);
 ?>
 
 <p style="font-size: 14px; line-height: 1.5; margin: 0 0 14px;">
@@ -151,20 +159,67 @@ $offline_payment_instructions = trim(settings()->offline_payment->instructions ?
 
 <hr style="border: 0; border-top: 1px solid #9ca3af; margin: 18px 0;" />
 
-<h3 style="font-size: 17px; line-height: 1.35; margin: 0 0 12px; font-weight: 700;">How to confirm payment?</h3>
+<h3 style="font-size: 17px; line-height: 1.35; margin: 0 0 14px; font-weight: 700;">How to confirm payment?</h3>
 
-<?php if($is_online_payment): ?>
-    <p style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
-        Click the <strong>Pay now</strong> button above or open the direct payment link to complete payment instantly via <strong><?= e($payment_method_label) ?></strong>. Once completed, your subscription and plan will be renewed automatically without requiring any manual confirmation.
-    </p>
-<?php elseif($offline_payment_instructions): ?>
-    <div style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
-        <?= nl2br($offline_payment_instructions) ?>
-    </div>
+<?php if($is_kenyan_account): ?>
+    <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; margin: 0 0 16px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+        <tbody>
+        <tr>
+            <td style="padding: 14px 16px;">
+                <p style="font-size: 15px; font-weight: 700; color: #1e293b; margin: 0 0 6px;">
+                    OPTION 1: Instant Online Payment (Recommended)
+                </p>
+                <p style="font-size: 14px; line-height: 1.5; color: #475569; margin: 0 0 10px;">
+                    Click the <strong>Pay now</strong> button above or use the direct link to pay online instantly via <strong>M-PESA, Airtel Money, or Card</strong>. Your plan activates immediately without any delay.
+                </p>
+                <?php if(!empty($data->pay_now_url)): ?>
+                    <a href="<?= $data->pay_now_url ?>" style="background-color: <?= settings()->smtp->button_background_color ?? '#1b1b1b' ?>; border-radius: <?= settings()->smtp->button_border_radius ?? '10' ?>px; color: <?= settings()->smtp->button_text_color ?? '#ffffff' ?>; display: inline-block; font-size: 14px; font-weight: 700; line-height: 1.2; padding: 10px 18px; text-decoration: none;">
+                        Pay now online &rarr;
+                    </a>
+                <?php endif ?>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; margin: 0 0 18px; background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;">
+        <tbody>
+        <tr>
+            <td style="padding: 14px 16px;">
+                <p style="font-size: 15px; font-weight: 700; color: #166534; margin: 0 0 8px;">
+                    OPTION 2: LIPA NA M-PESA PAYBILL (Kenyan Accounts)
+                </p>
+                <div style="background-color: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px;">
+                    <p style="font-size: 14px; line-height: 1.6; margin: 0; color: #1e293b;">
+                        <strong>LIPA NA MPESA PAY BILL NUMBER:</strong> <span style="font-family: monospace; font-size: 15px; font-weight: 700; color: #047857;">522 522</span><br />
+                        <strong>ACCOUNT NUMBER:</strong> <span style="font-family: monospace; font-size: 15px; font-weight: 700; color: #047857;">1300866071</span>
+                    </p>
+                </div>
+                <ol style="font-size: 13px; line-height: 1.5; margin: 0 0 0 18px; padding: 0; color: #334155;">
+                    <li>Go to M-PESA &gt; <strong>Lipa na M-PESA</strong> &gt; <strong>Pay Bill</strong></li>
+                    <li>Enter Business Number <strong>522 522</strong></li>
+                    <li>Enter Account Number <strong>1300866071</strong></li>
+                    <li>Enter Amount <strong><?= e($format_money($data->invoice->total_amount)) ?></strong> and your PIN</li>
+                    <li>Paste the confirmation SMS via the payment link or attach it to activate your subscription instantly.</li>
+                </ol>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 <?php else: ?>
-    <p style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
-        Please use the invoice number as your payment reference. Your payment will be allocated after confirmation.
-    </p>
+    <?php if($is_online_payment): ?>
+        <p style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
+            Click the <strong>Pay now</strong> button above or open the direct payment link to complete payment instantly via <strong><?= e($payment_method_label) ?></strong>. Once completed, your subscription and plan will be renewed automatically without requiring any manual confirmation.
+        </p>
+    <?php elseif($offline_payment_instructions): ?>
+        <div style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
+            <?= nl2br($offline_payment_instructions) ?>
+        </div>
+    <?php else: ?>
+        <p style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
+            Please use the invoice number as your payment reference. Your payment will be allocated after confirmation.
+        </p>
+    <?php endif ?>
 <?php endif ?>
 
 <p style="font-size: 14px; line-height: 1.5; margin: 0 0 6px;">

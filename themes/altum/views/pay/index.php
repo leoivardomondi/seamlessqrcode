@@ -50,7 +50,15 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
         </nav>
     <?php endif ?>
 
-    <?php if(!settings()->payment->trial_require_card && $data->plan->trial_days && !$this->user->plan_trial_done && !isset($_GET['trial_skip']) && !isset($_GET['invoice_id'])): ?>
+    <?php 
+    $is_subscribed_user = !empty($this->user->plan_trial_done)
+        || ($this->user->plan_id != 'free')
+        || !empty($this->user->payment_processor)
+        || isset($_GET['trial_skip'])
+        || isset($_GET['invoice_id'])
+        || isset($_GET['subscription_id']);
+    ?>
+    <?php if(!settings()->payment->trial_require_card && $data->plan->trial_days && !$is_subscribed_user): ?>
         <div class="d-flex align-items-center mb-5">
             <h1 class="h3 m-0"><?= sprintf(l('pay.trial.header'), $data->plan->translations->{\Altum\Language::$name}->name ?? $data->plan->name) ?></h1>
 
@@ -112,6 +120,36 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
                 </span>
             </div>
         </div>
+
+        <?php if(!empty($data->invoice_data)): ?>
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #f0fdf4; border-left: 5px solid #22c55e !important;">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                        <div>
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge badge-primary mr-2"><i class="fas fa-file-invoice mr-1"></i> Proforma Invoice #<?= $data->invoice_data['invoice_number'] ?></span>
+                                <span class="badge badge-success"><i class="fas fa-bolt mr-1"></i> Instant Activation</span>
+                            </div>
+                            <h5 class="font-weight-bold mb-1" style="color: #14532d;">
+                                Pay <?= nr($data->invoice_data['amount'], 2) ?> <?= $data->invoice_data['currency'] ?> for <?= e($data->invoice_data['plan_name']) ?> (<?= ucfirst($data->invoice_data['frequency']) ?>)
+                            </h5>
+                            <div class="text-muted small">
+                                <i class="fas fa-calendar-alt mr-1"></i> Activation period: <strong><?= \Altum\Date::get($data->invoice_data['period_start'], 1) ?> – <?= \Altum\Date::get($data->invoice_data['period_end'], 1) ?></strong>
+                                <?php if(!empty($data->invoice_data['email'])): ?>
+                                    &bull; <i class="fas fa-envelope mr-1"></i> Linked account: <strong><?= e($data->invoice_data['email']) ?></strong>
+                                <?php endif ?>
+                            </div>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-check-circle mr-1"></i> Complete payment below to activate your account and subscription instantly.
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-md-0 text-md-right">
+                            <span class="h3 font-weight-bolder text-success mb-0"><?= nr($data->invoice_data['amount'], 2) ?> <small><?= $data->invoice_data['currency'] ?></small></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif ?>
 
         <form action="" method="post" enctype="multipart/form-data" role="form">
             <input type="hidden" name="plan_id" value="<?= $data->plan_id ?>" />
@@ -406,10 +444,46 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
                         </div>
 
                         <div id="offline_payment_processor_wrapper" style="display: none;">
-                            <div class="form-group mt-4">
-                                <label><?= l('pay.custom_plan.offline_payment_instructions') ?></label>
-                                <div class="card"><div class="card-body"><?= nl2br(settings()->offline_payment->instructions) ?></div></div>
-                            </div>
+                            <?php
+                            $is_kenyan_account = (
+                                strtoupper(currency() ?? '') === 'KES'
+                                || strtoupper($this->user->billing->country ?? '') === 'KE'
+                                || strtolower($this->user->billing->country ?? '') === 'kenya'
+                                || strtoupper($this->user->country ?? '') === 'KE'
+                                || strtolower($this->user->country ?? '') === 'kenya'
+                            );
+                            ?>
+
+                            <?php if($is_kenyan_account): ?>
+                                <div class="card border-primary bg-light mt-4 mb-3">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge badge-primary mr-2">OPTION 2</span>
+                                            <h6 class="font-weight-bold text-primary mb-0">
+                                                <i class="fas fa-mobile-alt mr-1"></i> LIPA NA M-PESA PAYBILL (Kenyan Accounts)
+                                            </h6>
+                                        </div>
+                                        <div class="p-3 mb-2 bg-white rounded border">
+                                            <div class="mb-2"><strong>LIPA NA MPESA PAY BILL NUMBER:</strong> <span class="badge badge-primary font-size-base px-2 py-1">522 522</span></div>
+                                            <div><strong>ACCOUNT NUMBER:</strong> <span class="badge badge-dark font-size-base px-2 py-1">1300866071</span></div>
+                                        </div>
+                                        <ol class="small text-muted pl-3 mb-0">
+                                            <li>Go to M-PESA menu &gt; <strong>Lipa na M-PESA</strong> &gt; <strong>Pay Bill</strong>.</li>
+                                            <li>Enter Business Number <strong>522 522</strong>.</li>
+                                            <li>Enter Account Number <strong>1300866071</strong>.</li>
+                                            <li>Enter the exact amount and your M-PESA PIN.</li>
+                                            <li>Paste the received M-PESA SMS confirmation below to activate instantly!</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            <?php endif ?>
+
+                            <?php if(!empty(trim(settings()->offline_payment->instructions ?? ''))): ?>
+                                <div class="form-group mt-3">
+                                    <label><?= l('pay.custom_plan.offline_payment_instructions') ?></label>
+                                    <div class="card"><div class="card-body"><?= nl2br(settings()->offline_payment->instructions) ?></div></div>
+                                </div>
+                            <?php endif ?>
 
                             <div class="form-group mt-4">
                                 <div class="d-flex justify-content-between align-items-center mb-1">

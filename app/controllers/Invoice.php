@@ -134,16 +134,26 @@ class Invoice extends Controller {
 
     public function proforma() {
 
-        \Altum\Authentication::guard();
-
         $invoice_id = isset($this->params[0]) ? (int) $this->params[0] : null;
 
         if(!$invoice = db()->where('invoice_id', $invoice_id)->getOne('invoices')) {
             redirect();
         }
 
-        if((int) $invoice->user_id !== (int) $this->user->user_id) {
-            redirect();
+        if(!\Altum\Authentication::check()) {
+            /* Allow public viewing of proforma invoice linked to customer email */
+            $customer_user = db()->where('user_id', $invoice->user_id)->getOne('users');
+            if(!$customer_user) {
+                redirect();
+            }
+            $customer_user->billing = json_decode($customer_user->billing ?? '');
+            $customer_user->preferences = json_decode($customer_user->preferences ?? '');
+            $customer_user->plan_trial_done = 1;
+            $this->user = $customer_user;
+        } else {
+            if((int) $invoice->user_id !== (int) $this->user->user_id && $this->user->type != 1) {
+                redirect();
+            }
         }
 
         [$payment, $payment_taxes] = $this->prepare_invoice_row_document($invoice);
@@ -214,16 +224,26 @@ class Invoice extends Controller {
 
     public function download_proforma() {
 
-        \Altum\Authentication::guard();
-
         $invoice_id = isset($this->params[0]) ? (int) $this->params[0] : null;
 
         if(!$invoice = db()->where('invoice_id', $invoice_id)->getOne('invoices')) {
             redirect();
         }
 
-        if((int) $invoice->user_id !== (int) $this->user->user_id) {
-            redirect();
+        if(!\Altum\Authentication::check()) {
+            /* Allow public download of proforma invoice PDF linked to customer email */
+            $customer_user = db()->where('user_id', $invoice->user_id)->getOne('users');
+            if(!$customer_user) {
+                redirect();
+            }
+            $customer_user->billing = json_decode($customer_user->billing ?? '');
+            $customer_user->preferences = json_decode($customer_user->preferences ?? '');
+            $customer_user->plan_trial_done = 1;
+            $this->user = $customer_user;
+        } else {
+            if((int) $invoice->user_id !== (int) $this->user->user_id && $this->user->type != 1) {
+                redirect();
+            }
         }
 
         [$payment, $payment_taxes] = $this->prepare_invoice_row_document($invoice);

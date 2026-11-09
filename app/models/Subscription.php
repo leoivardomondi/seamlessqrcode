@@ -707,10 +707,17 @@ class Subscription extends Model {
         $payment_processor = $data['payment_processor'] ?? ($invoice->processor === 'proforma' ? 'offline_payment' : $invoice->processor);
         $payment_type = $data['payment_type'] ?? ($invoice->type === 'proforma' ? 'one_time' : $invoice->type);
 
+        /* Only mark invoice as paid if an M-PESA message/reference is attached or payment was done online */
+        $is_online = ($payment_processor !== 'offline_payment' && $payment_processor !== 'proforma');
+        $has_mpesa = !empty($data['confirmation_message']) || !empty($data['code']) || !empty($metadata['confirmation_message']) || !empty($metadata['code']) || !empty($data['payment_proof']) || !empty($data['offline_payment_proof_text']);
+
+        $invoice_status = ($is_online || $has_mpesa) ? 'paid' : 'draft';
+        $final_paid_datetime = ($is_online || $has_mpesa) ? $paid_datetime : null;
+
         $update_data = [
             'subscription_id' => $subscription_id ?: null,
             'payment_id' => $data['local_payment_id'] ?? $invoice->payment_id,
-            'status' => 'paid',
+            'status' => $invoice_status,
             'processor' => $payment_processor,
             'type' => $payment_type,
             'frequency' => $payment_frequency,
@@ -722,7 +729,7 @@ class Subscription extends Model {
             'total_amount' => $total,
             'total_amount_default_currency' => $total_amount_default_currency,
             'currency' => $currency,
-            'paid_datetime' => $paid_datetime,
+            'paid_datetime' => $final_paid_datetime,
             'metadata' => json_encode($metadata),
         ];
 
@@ -858,13 +865,20 @@ class Subscription extends Model {
 
         $this->normalize_invoice_prefix($business);
 
+        $payment_processor = $data['payment_processor'] ?? 'offline_payment';
+        $is_online = ($payment_processor !== 'offline_payment' && $payment_processor !== 'proforma');
+        $has_mpesa = !empty($data['confirmation_message']) || !empty($data['code']) || !empty($metadata['confirmation_message']) || !empty($metadata['code']) || !empty($data['payment_proof']) || !empty($data['offline_payment_proof_text']);
+
+        $invoice_status = ($is_online || $has_mpesa) ? 'paid' : 'draft';
+        $final_paid_datetime = ($is_online || $has_mpesa) ? $paid_datetime : null;
+
         $invoice_id = db()->insert('invoices', [
             'subscription_id' => (int) $subscription_id,
             'payment_id' => $data['local_payment_id'] ?? null,
             'user_id' => (int) $data['user_id'],
             'plan_id' => (string) $data['plan_id'],
-            'status' => 'paid',
-            'processor' => $data['payment_processor'],
+            'status' => $invoice_status,
+            'processor' => $payment_processor,
             'external_payment_id' => $external_payment_id ?: null,
             'type' => $data['payment_type'] ?? null,
             'frequency' => $data['payment_frequency'] ?? null,
@@ -877,7 +891,7 @@ class Subscription extends Model {
             'total_amount_default_currency' => $total_amount_default_currency,
             'currency' => $data['payment_currency'],
             'due_datetime' => $due_datetime,
-            'paid_datetime' => $paid_datetime,
+            'paid_datetime' => $final_paid_datetime,
             'billing' => $data['billing'] ?? null,
             'business' => json_encode($business),
             'metadata' => json_encode($metadata),
@@ -1128,6 +1142,14 @@ class Subscription extends Model {
         $frequency_price = $plan->prices->{$subscription->frequency}->{$currency} ?? null;
 
         if(!$frequency_price) {
+            $frequency_price = $this->get_plan_frequency_price($plan, $subscription->frequency, $currency);
+        }
+
+        if(!$frequency_price && (float) $amount > 0) {
+            $frequency_price = (float) $amount;
+        }
+
+        if(!$frequency_price) {
             return [
                 'url' => url('invoice/proforma/' . $invoice_id),
                 'processor' => null,
@@ -1158,6 +1180,10 @@ class Subscription extends Model {
             'invoice_id' => (int) $invoice_id,
             'trial_skip' => 'true',
         ];
+
+        if(!empty($subscription->user_email)) {
+            $query['email'] = $subscription->user_email;
+        }
 
         if($processor) {
             $query['payment_processor'] = $processor;

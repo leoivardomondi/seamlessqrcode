@@ -215,6 +215,12 @@ class AdminSubscriptions extends Controller {
         $_POST['confirmation_message'] = trim($_POST['confirmation_message'] ?? '');
         $_POST['code'] = query_clean($_POST['code'] ?? '');
 
+        /* Invoices can only be marked as paid if M-PESA message/code is attached or paid online */
+        if(empty($_POST['confirmation_message']) && empty($_POST['code'])) {
+            Alerts::add_error(l('admin_subscriptions.error_message.manual_period_mpesa_required') ?? 'An invoice can only be marked as paid if an M-PESA confirmation message or transaction reference is provided.');
+            redirect('admin/subscriptions/view/' . $subscription->subscription_id);
+        }
+
         $result = $subscription_model->apply_manual_period(
             $subscription->subscription_id,
             $_POST['frequency'],
