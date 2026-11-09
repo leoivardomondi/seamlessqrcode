@@ -1079,6 +1079,9 @@ class Pay extends Controller {
             if(!is_dir($proof_dir)) {
                 @mkdir($proof_dir, 0755, true);
             }
+            if(!file_exists($proof_dir . 'index.php')) {
+                @file_put_contents($proof_dir . 'index.php', "<?php header('Location: /', true, 301); exit();");
+            }
             file_put_contents($proof_dir . $txt_filename, $txt_content);
             $offline_payment_proof_file = $txt_filename;
         }

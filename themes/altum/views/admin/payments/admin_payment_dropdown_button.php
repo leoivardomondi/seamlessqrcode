@@ -7,7 +7,9 @@
 
     <div class="dropdown-menu dropdown-menu-right">
         <?php if($data->processor == 'offline_payment'): ?>
-            <a href="<?= \Altum\Uploads::get_full_url('offline_payment_proofs') . $data->payment_proof ?>" target="_blank" class="dropdown-item"><i class="fas fa-fw fa-sm fa-download mr-2"></i> <?= l('admin_payments.action_view_proof') ?></a>
+            <?php if(!empty($data->payment_proof)): ?>
+                <a href="<?= \Altum\Uploads::get_full_url('offline_payment_proofs') . $data->payment_proof ?>" target="_blank" class="dropdown-item"><i class="fas fa-fw fa-sm fa-download mr-2"></i> <?= l('admin_payments.action_view_proof') ?></a>
+            <?php endif ?>
 
             <?php if(!$data->status): ?>
                 <a href="#" data-toggle="modal" data-target="#payment_approve_modal" data-payment-id="<?= $data->id ?>" class="dropdown-item"><i class="fas fa-fw fa-sm fa-check mr-2"></i> <?= l('admin_payments.action_approve_proof') ?></a>

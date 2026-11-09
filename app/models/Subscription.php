@@ -1500,6 +1500,31 @@ class Subscription extends Model {
 
         $payment_unique_id = $code ?: ('manual_' . md5($subscription->subscription_id . $subscription->user_id . $subscription->plan_id . $frequency . $payment_datetime . $processed_datetime));
 
+        $payment_proof_file = null;
+        if(!empty($confirmation_message)) {
+            try {
+                $txt_filename = md5($payment_unique_id . microtime()) . '.txt';
+                $txt_content = "=== MANUAL PAYMENT CONFIRMATION RECEIPT ===" . PHP_EOL;
+                if(!empty($code)) $txt_content .= "Transaction Ref: " . $code . PHP_EOL;
+                $txt_content .= "Amount: " . $price . " " . $currency . PHP_EOL;
+                $txt_content .= "Payment Date: " . $payment_datetime . PHP_EOL;
+                $txt_content .= "Frequency: " . $frequency . PHP_EOL;
+                $txt_content .= "Source: Manual Admin Billing Period" . PHP_EOL;
+                $txt_content .= PHP_EOL . "=== CONFIRMATION MESSAGE ===" . PHP_EOL;
+                $txt_content .= $confirmation_message . PHP_EOL;
+
+                $proof_dir = \Altum\Uploads::get_full_path('offline_payment_proofs');
+                if(!is_dir($proof_dir)) {
+                    @mkdir($proof_dir, 0755, true);
+                }
+                if(!file_exists($proof_dir . 'index.php')) {
+                    @file_put_contents($proof_dir . 'index.php', "<?php header('Location: /', true, 301); exit();");
+                }
+                @file_put_contents($proof_dir . $txt_filename, $txt_content);
+                $payment_proof_file = $txt_filename;
+            } catch(\Throwable $e) {}
+        }
+
         $payment_id = db()->insert('payments', [
             'user_id' => $subscription->user_id,
             'plan_id' => $subscription->plan_id,
@@ -1522,6 +1547,7 @@ class Subscription extends Model {
             'total_amount' => $price,
             'total_amount_default_currency' => $total_amount_default_currency ?? 0,
             'currency' => $currency,
+            'payment_proof' => $payment_proof_file,
             'status' => 1,
             'datetime' => $payment_datetime,
         ]);

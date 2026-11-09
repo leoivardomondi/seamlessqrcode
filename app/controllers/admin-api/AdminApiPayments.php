@@ -95,7 +95,7 @@ class AdminApiPayments extends Controller {
                 'total_amount_default_currency' => $row->total_amount_default_currency,
                 'currency' => $row->currency,
                 'payment_proof' => $row->payment_proof,
-                'payment_proof_url' => \Altum\Uploads::get_full_url('offline_payment_proofs') . $row->payment_proof_url,
+                'payment_proof_url' => !empty($row->payment_proof) ? \Altum\Uploads::get_full_url('offline_payment_proofs') . $row->payment_proof : null,
                 'status' => (bool) (int) $row->status,
                 'datetime' => $row->datetime,
             ];
@@ -157,7 +157,7 @@ class AdminApiPayments extends Controller {
             'total_amount_default_currency' => $payment->total_amount_default_currency,
             'currency' => $payment->currency,
             'payment_proof' => $payment->payment_proof,
-            'payment_proof_url' => \Altum\Uploads::get_full_url('offline_payment_proofs') . $payment->payment_proof_url,
+            'payment_proof_url' => !empty($payment->payment_proof) ? \Altum\Uploads::get_full_url('offline_payment_proofs') . $payment->payment_proof : null,
             'status' => (bool) (int) $payment->status,
             'datetime' => $payment->datetime,
         ];
