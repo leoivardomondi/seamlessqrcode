@@ -53,7 +53,35 @@
             transition: margin-left .2s ease, margin-right .2s ease !important;
         }
 
-        @media (min-width: 992px) {
+        .app-sidebar-collapse-btn {
+            cursor: pointer !important;
+            z-index: 105 !important;
+            position: relative;
+            border: 1px solid var(--gray-200);
+            border-radius: .35rem;
+            background: var(--white);
+            color: var(--gray-700) !important;
+            width: 32px;
+            height: 32px;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 0 !important;
+            transition: all .15s ease;
+        }
+
+        .app-sidebar-collapse-btn:hover {
+            background: var(--gray-100);
+            color: var(--gray-900) !important;
+            border-color: var(--gray-300);
+        }
+
+        .app-sidebar-collapse-btn i,
+        .app-sidebar-collapse-btn svg {
+            pointer-events: none !important;
+        }
+
+        @media (min-width: 768px) {
             body.app-sidebar-collapsed .app-sidebar {
                 min-width: 75px !important;
                 max-width: 75px !important;
@@ -269,17 +297,25 @@
             let collapse_btn = document.querySelector('#app_sidebar_collapse');
             if(collapse_btn && !collapse_btn.dataset.initialized) {
                 collapse_btn.dataset.initialized = 'true';
-                collapse_btn.addEventListener('click', event => {
-                    event.preventDefault();
-                    document.body.classList.toggle('app-sidebar-collapsed');
-                    let is_collapsed = document.body.classList.contains('app-sidebar-collapsed');
-                    localStorage.setItem('app_sidebar_collapsed', is_collapsed ? 'true' : 'false');
-                    update_collapse_button_icon();
+                if(!collapse_btn.getAttribute('onclick')) {
+                    collapse_btn.addEventListener('click', event => {
+                        if(typeof window.toggleAppSidebarCollapse === 'function') {
+                            window.toggleAppSidebarCollapse(event);
+                        } else {
+                            event.preventDefault();
+                            document.body.classList.toggle('app-sidebar-collapsed');
+                            let is_collapsed = document.body.classList.contains('app-sidebar-collapsed');
+                            try {
+                                localStorage.setItem('app_sidebar_collapsed', is_collapsed ? 'true' : 'false');
+                            } catch(e) {}
+                            update_collapse_button_icon();
 
-                    setTimeout(() => {
-                        window.dispatchEvent(new Event('resize'));
-                    }, 250);
-                });
+                            setTimeout(() => {
+                                window.dispatchEvent(new Event('resize'));
+                            }, 250);
+                        }
+                    });
+                }
             }
 
             // Add tooltips to sidebar links for compact mode

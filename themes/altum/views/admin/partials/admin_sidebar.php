@@ -34,7 +34,7 @@
             <?php endif ?>
         </div>
 
-        <button type="button" id="admin_sidebar_collapse" onclick="toggleAdminSidebarCollapse(event)" class="btn btn-sm btn-link text-muted p-1 ml-auto admin-sidebar-collapse-btn d-none d-lg-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
+        <button type="button" id="admin_sidebar_collapse" onclick="window.toggleAdminSidebarCollapse(event)" class="btn btn-sm btn-link text-muted p-1 ml-auto admin-sidebar-collapse-btn d-none d-md-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
             <i class="fas fa-fw fa-bars"></i>
         </button>
     </div>
@@ -426,8 +426,11 @@
 <script>
     document.querySelector('ul[class="admin-sidebar-links"] li.active') && document.querySelector('ul[class="admin-sidebar-links"] li.active').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    function toggleAdminSidebarCollapse(event) {
-        if(event) event.preventDefault();
+    window.toggleAdminSidebarCollapse = function(event) {
+        if(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
         document.body.classList.toggle('admin-sidebar-collapsed');
         let is_collapsed = document.body.classList.contains('admin-sidebar-collapsed');
         try {
@@ -443,7 +446,7 @@
         setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
         }, 220);
-    }
+    };
 
     if(document.body.classList.contains('admin-sidebar-collapsed')) {
         let btn = document.querySelector('#admin_sidebar_collapse');

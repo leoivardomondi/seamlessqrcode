@@ -18,20 +18,26 @@ let toggle_admin_sidebar = () => {
 };
 
 /* Toggler for the sidebar */
-document.querySelector('#admin_menu_toggler').addEventListener('click', event => {
-    event.preventDefault();
+let admin_menu_toggler = document.querySelector('#admin_menu_toggler');
+if(admin_menu_toggler) {
+    admin_menu_toggler.addEventListener('click', event => {
+        event.preventDefault();
 
-    toggle_admin_sidebar();
+        toggle_admin_sidebar();
 
-    let admin_sidebar_is_opened = document.querySelector('body').classList.contains('admin-sidebar-opened');
+        let admin_sidebar_is_opened = document.querySelector('body').classList.contains('admin-sidebar-opened');
+        let admin_overlay = document.querySelector('#admin_overlay');
 
-    if(admin_sidebar_is_opened) {
-        document.querySelector('#admin_overlay').removeEventListener('click', toggle_admin_sidebar);
-        document.querySelector('#admin_overlay').addEventListener('click', toggle_admin_sidebar);
-    } else {
-        document.querySelector('#admin_overlay').removeEventListener('click', toggle_admin_sidebar);
-    }
-});
+        if(admin_overlay) {
+            if(admin_sidebar_is_opened) {
+                admin_overlay.removeEventListener('click', toggle_admin_sidebar);
+                admin_overlay.addEventListener('click', toggle_admin_sidebar);
+            } else {
+                admin_overlay.removeEventListener('click', toggle_admin_sidebar);
+            }
+        }
+    });
+}
 
 /* Custom select implementation */
 $('select:not([multiple="multiple"]):not([class="input-group-text"]):not([class="custom-select custom-select-sm"]):not([class^="ql"]):not([data-is-not-custom-select])').each(function() {
@@ -70,17 +76,25 @@ let init_admin_sidebar_collapse = () => {
     let collapse_btn = document.querySelector('#admin_sidebar_collapse');
     if(collapse_btn && !collapse_btn.dataset.initialized) {
         collapse_btn.dataset.initialized = 'true';
-        collapse_btn.addEventListener('click', event => {
-            event.preventDefault();
-            document.body.classList.toggle('admin-sidebar-collapsed');
-            let is_collapsed = document.body.classList.contains('admin-sidebar-collapsed');
-            localStorage.setItem('admin_sidebar_collapsed', is_collapsed ? 'true' : 'false');
-            update_collapse_button_icon();
+        if(!collapse_btn.getAttribute('onclick')) {
+            collapse_btn.addEventListener('click', event => {
+                if(typeof window.toggleAdminSidebarCollapse === 'function') {
+                    window.toggleAdminSidebarCollapse(event);
+                } else {
+                    event.preventDefault();
+                    document.body.classList.toggle('admin-sidebar-collapsed');
+                    let is_collapsed = document.body.classList.contains('admin-sidebar-collapsed');
+                    try {
+                        localStorage.setItem('admin_sidebar_collapsed', is_collapsed ? 'true' : 'false');
+                    } catch(e) {}
+                    update_collapse_button_icon();
 
-            setTimeout(() => {
-                window.dispatchEvent(new Event('resize'));
-            }, 250);
-        });
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    }, 250);
+                }
+            });
+        }
     }
 
     // Add tooltips to sidebar links for compact mode

@@ -247,8 +247,36 @@ body.app-sidebar-opened .app-sidebar {
 	}
 }
 
+.app-sidebar-collapse-btn {
+    cursor: pointer !important;
+    z-index: 105 !important;
+    position: relative;
+    border: 1px solid var(--gray-200);
+    border-radius: .35rem;
+    background: var(--white);
+    color: var(--gray-700) !important;
+    width: 32px;
+    height: 32px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    transition: all .15s ease;
+}
+
+.app-sidebar-collapse-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-900) !important;
+    border-color: var(--gray-300);
+}
+
+.app-sidebar-collapse-btn i,
+.app-sidebar-collapse-btn svg {
+    pointer-events: none !important;
+}
+
 /* Squeezed / Collapsed App Sidebar state (Desktop & Laptops) */
-@media (min-width: 992px) {
+@media (min-width: 768px) {
     body.app-sidebar-collapsed .app-sidebar {
         min-width: 75px !important;
         max-width: 75px !important;

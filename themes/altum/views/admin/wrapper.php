@@ -36,7 +36,35 @@
             transition: margin-left .2s ease, margin-right .2s ease !important;
         }
 
-        @media (min-width: 992px) {
+        .admin-sidebar-collapse-btn {
+            cursor: pointer !important;
+            z-index: 105 !important;
+            position: relative;
+            border: 1px solid var(--gray-200);
+            border-radius: .35rem;
+            background: var(--white);
+            color: var(--gray-700) !important;
+            width: 32px;
+            height: 32px;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 0 !important;
+            transition: all .15s ease;
+        }
+
+        .admin-sidebar-collapse-btn:hover {
+            background: var(--gray-100);
+            color: var(--gray-900) !important;
+            border-color: var(--gray-300);
+        }
+
+        .admin-sidebar-collapse-btn i,
+        .admin-sidebar-collapse-btn svg {
+            pointer-events: none !important;
+        }
+
+        @media (min-width: 768px) {
             body.admin-sidebar-collapsed .admin-sidebar {
                 min-width: 75px !important;
                 max-width: 75px !important;
