@@ -157,6 +157,10 @@ class Links extends Controller {
 
                     foreach($_POST['selected'] as $link_id) {
                         if($link = db()->where('link_id', $link_id)->where('user_id', $this->user->user_id)->getOne('links', ['link_id'])) {
+                            /* Protect dynamic QR codes */
+                            if(db()->where('link_id', $link->link_id)->has('qr_codes')) {
+                                continue;
+                            }
                             /* Delete the resource */
                             (new \Altum\Models\Link())->delete($link->link_id);
                         }

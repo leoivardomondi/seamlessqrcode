@@ -44,6 +44,7 @@ class Link extends Controller {
         $this->link->settings = json_decode($this->link->settings ?? '');
         $this->link->pixels_ids = json_decode($this->link->pixels_ids ?? '[]');
         $this->link->email_reports = json_decode($this->link->email_reports ?? '[]');
+        $this->link->has_qr_code = db()->where('link_id', $this->link->link_id)->has('qr_codes');
 
         /* Get the current domain if needed */
         $this->link->domain = $this->link->domain_id ? (new Domain())->get_domain_by_domain_id($this->link->domain_id) : null;

@@ -918,6 +918,16 @@ class LinkAjax extends Controller {
             die();
         }
 
+        /* Protect dynamicity: never allow altering url slug or domain_id of links tied to QR codes */
+        if(!empty($_POST['link_id'])) {
+            $existing_link = db()->where('link_id', (int) $_POST['link_id'])->where('user_id', $this->user->user_id)->getOne('links', ['link_id', 'url', 'domain_id']);
+            if($existing_link && db()->where('link_id', $existing_link->link_id)->has('qr_codes')) {
+                $_POST['url'] = $existing_link->url;
+                $_POST['domain_id'] = $existing_link->domain_id;
+                $_POST['is_main_link'] = false;
+            }
+        }
+
         $this->{'update_' . $_POST['type']}();
 
     }
@@ -2493,6 +2503,11 @@ class LinkAjax extends Controller {
         /* Check for possible errors */
         if(!$link = db()->where('link_id', $_POST['link_id'])->where('user_id', $this->user->user_id)->getOne('links', ['link_id', 'type'])) {
             die();
+        }
+
+        /* Protect dynamic QR codes: prevent deleting a short link that has a QR code pointing to it */
+        if(db()->where('link_id', $link->link_id)->has('qr_codes')) {
+            Response::json(l('link.error_message.cannot_delete_qr_linked') ?? 'This short link cannot be deleted because a dynamic QR code is actively pointing to it.', 'error');
         }
 
         (new \Altum\Models\Link())->delete($link->link_id);

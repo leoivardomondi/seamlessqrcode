@@ -156,7 +156,11 @@ class QrCodeUpdate extends Controller {
                     $settings['url'] = $_POST['url'] = input_clean($_POST['url'], $available_qr_codes['url']['max_length']);
                     $_POST['dynamic_url_slug'] = isset($_POST['dynamic_url_slug']) ? get_slug($_POST['dynamic_url_slug'], '-', false) : null;
 
-                    if(isset($_POST['link_id']) && isset($_POST['url_dynamic'])) {
+                    if(!empty($qr_code->link_id)) {
+                        /* A dynamic QR code's link and dynamicity is permanently locked to protect its dynamicity */
+                        $_POST['url_dynamic'] = 'on';
+                        $_POST['link_id'] = (int) $qr_code->link_id;
+                    } else if(isset($_POST['link_id']) && isset($_POST['url_dynamic'])) {
                         $link = db()->where('link_id', $_POST['link_id'])->where('user_id', $this->user->user_id)->getOne('links', ['link_id']);
                         if(!$link) {
                             $_POST['link_id'] = null;
@@ -346,18 +350,21 @@ class QrCodeUpdate extends Controller {
                 Alerts::add_error(l('global.error_message.invalid_csrf_token'));
             }
 
-            if($_POST['type'] == 'url' && isset($_POST['url_dynamic'])) {
+            if($_POST['type'] == 'url' && (isset($_POST['url_dynamic']) || !empty($qr_code->link_id))) {
                 $destination_url = get_url($_POST['url']);
 
                 if(!$destination_url) {
                     Alerts::add_field_error('url', l('link.error_message.invalid_location_url'));
                 }
 
-                if(!empty($_POST['link_id'])) {
-                    $dynamic_link = db()->where('link_id', (int) $_POST['link_id'])->where('user_id', $this->user->user_id)->getOne('links', ['link_id', 'domain_id', 'url']);
+                $effective_link_id = !empty($qr_code->link_id) ? $qr_code->link_id : (!empty($_POST['link_id']) ? (int) $_POST['link_id'] : null);
+
+                if(!empty($effective_link_id)) {
+                    $dynamic_link = db()->where('link_id', (int) $effective_link_id)->where('user_id', $this->user->user_id)->getOne('links', ['link_id', 'domain_id', 'url']);
 
                     if($dynamic_link) {
                         $settings['url'] = get_full_url_from_link_url($dynamic_link->url, $dynamic_link->domain_id);
+                        $_POST['link_id'] = (int) $dynamic_link->link_id;
                     } else {
                         $_POST['link_id'] = null;
                     }
@@ -383,18 +390,20 @@ class QrCodeUpdate extends Controller {
             $qr_code->qr_code_foreground = \Altum\Uploads::process_upload($qr_code->qr_code_foreground, 'qr_code_foreground', 'qr_code_foreground', 'qr_code_foreground_remove', settings()->codes->background_size_limit);
 
             if(!Alerts::has_field_errors() && !Alerts::has_errors()) {
-                if($_POST['type'] == 'url' && isset($_POST['url_dynamic'])) {
+                if($_POST['type'] == 'url' && (isset($_POST['url_dynamic']) || !empty($qr_code->link_id))) {
                     $destination_url = get_url($_POST['url']);
+                    $effective_link_id = !empty($qr_code->link_id) ? $qr_code->link_id : (!empty($_POST['link_id']) ? (int) $_POST['link_id'] : null);
 
-                    if(!empty($_POST['link_id'])) {
-                        db()->where('link_id', (int) $_POST['link_id'])->where('user_id', $this->user->user_id)->update('links', [
+                    if(!empty($effective_link_id)) {
+                        db()->where('link_id', (int) $effective_link_id)->where('user_id', $this->user->user_id)->update('links', [
                             'location_url' => $destination_url,
                             'project_id' => $_POST['project_id'],
                             'last_datetime' => get_date(),
                         ]);
+                        $_POST['link_id'] = (int) $effective_link_id;
                         cache()->deleteItem('links?user_id=' . $this->user->user_id);
-                        cache()->deleteItem('link?link_id=' . (int) $_POST['link_id']);
-                        cache()->deleteItemsByTag('link_id=' . (int) $_POST['link_id']);
+                        cache()->deleteItem('link?link_id=' . (int) $effective_link_id);
+                        cache()->deleteItemsByTag('link_id=' . (int) $effective_link_id);
                     } else {
                         $_POST['link_id'] = create_qr_code_dynamic_link($this->user, $destination_url, $_POST['name'], $_POST['project_id'], $_POST['dynamic_url_slug']);
                         cache()->deleteItem('link_links_total?user_id=' . $this->user->user_id);

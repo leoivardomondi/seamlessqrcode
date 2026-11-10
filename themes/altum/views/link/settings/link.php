@@ -18,43 +18,70 @@
                 <input id="location_url" type="text" class="form-control" name="location_url" value="<?= $data->link->location_url ?>" maxlength="2048" required="required" placeholder="<?= l('global.url_placeholder') ?>" />
             </div>
 
-            <div class="form-group">
-                <label for="url"><i class="fas fa-fw fa-bolt fa-sm text-muted mr-1"></i> <?= l('link.settings.url') ?></label>
-                <div class="input-group">
-                    <div class="input-group-prepend">
-                        <?php if(count($data->domains)): ?>
-                            <select name="domain_id" class="appearance-none custom-select form-control input-group-text">
-                                <?php if(settings()->links->main_domain_is_enabled || \Altum\Authentication::is_admin()): ?>
-                                    <option value="" <?= $data->link->domain ? 'selected="selected"' : null ?> data-full-url="<?= SITE_URL ?>"><?= remove_url_protocol_from_url(SITE_URL) ?></option>
-                                <?php endif ?>
+            <?php if(!empty($data->link->has_qr_code)): ?>
+                <input type="hidden" name="domain_id" value="<?= $data->link->domain_id ?>" />
+                <input type="hidden" name="url" value="<?= $data->link->url ?>" />
 
-                                <?php foreach($data->domains as $row): ?>
-                                    <option value="<?= $row->domain_id ?>" <?= $data->link->domain && $row->domain_id == $data->link->domain->domain_id ? 'selected="selected"' : null ?>  data-full-url="<?= $row->url ?>" data-type="<?= $row->type ?>"><?= remove_url_protocol_from_url($row->url) ?></option>
-                                <?php endforeach ?>
-                            </select>
-                        <?php else: ?>
-                            <span class="input-group-text"><?= remove_url_protocol_from_url(SITE_URL) ?></span>
-                        <?php endif ?>
+                <div class="form-group">
+                    <label for="url_locked"><i class="fas fa-fw fa-qrcode fa-sm text-primary mr-1"></i> <?= l('link.settings.url') ?> <span class="badge badge-primary ml-1"><i class="fas fa-lock fa-xs"></i> <?= l('global.locked') ?? 'Locked' ?></span></label>
+                    <div class="input-group">
+                        <input id="url_locked" type="text" class="form-control bg-light" value="<?= $data->link->full_url ?>" readonly="readonly" disabled="disabled" />
+                        <div class="input-group-append">
+                            <button
+                                    type="button"
+                                    class="btn btn-outline-secondary"
+                                    data-toggle="tooltip"
+                                    title="<?= l('global.clipboard_copy') ?>"
+                                    aria-label="<?= l('global.clipboard_copy') ?>"
+                                    data-copy="<?= l('global.clipboard_copy') ?>"
+                                    data-copied="<?= l('global.clipboard_copied') ?>"
+                                    data-clipboard-text="<?= $data->link->full_url ?>"
+                            >
+                                <i class="fas fa-fw fa-sm fa-copy"></i>
+                            </button>
+                        </div>
                     </div>
-
-                    <input
-                            id="url"
-                            type="text"
-                            class="form-control"
-                            name="url"
-                            placeholder="<?= l('global.url_slug_placeholder') ?>"
-                            value="<?= $data->link->url ?>"
-                            maxlength="<?= $this->user->plan_settings->url_maximum_characters ?? 64 ?>"
-                            onchange="update_this_value(this, get_slug)"
-                            onkeyup="update_this_value(this, get_slug)"
-                        <?= !$this->user->plan_settings->custom_url ? 'readonly="readonly"' : null ?>
-                        <?= $this->user->plan_settings->custom_url ? null : get_plan_feature_disabled_info() ?>
-                    />
+                    <small class="form-text text-muted"><i class="fas fa-info-circle mr-1"></i> <?= l('link.settings.url_locked_qr_help') ?></small>
                 </div>
-                <small class="form-text text-muted"><?= l('link.settings.url_help') ?></small>
-            </div>
+            <?php else: ?>
+                <div class="form-group">
+                    <label for="url"><i class="fas fa-fw fa-bolt fa-sm text-muted mr-1"></i> <?= l('link.settings.url') ?></label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <?php if(count($data->domains)): ?>
+                                <select name="domain_id" class="appearance-none custom-select form-control input-group-text">
+                                    <?php if(settings()->links->main_domain_is_enabled || \Altum\Authentication::is_admin()): ?>
+                                        <option value="" <?= $data->link->domain ? 'selected="selected"' : null ?> data-full-url="<?= SITE_URL ?>"><?= remove_url_protocol_from_url(SITE_URL) ?></option>
+                                    <?php endif ?>
 
-            <?php if(count($data->domains)): ?>
+                                    <?php foreach($data->domains as $row): ?>
+                                        <option value="<?= $row->domain_id ?>" <?= $data->link->domain && $row->domain_id == $data->link->domain->domain_id ? 'selected="selected"' : null ?>  data-full-url="<?= $row->url ?>" data-type="<?= $row->type ?>"><?= remove_url_protocol_from_url($row->url) ?></option>
+                                    <?php endforeach ?>
+                                </select>
+                            <?php else: ?>
+                                <span class="input-group-text"><?= remove_url_protocol_from_url(SITE_URL) ?></span>
+                            <?php endif ?>
+                        </div>
+
+                        <input
+                                id="url"
+                                type="text"
+                                class="form-control"
+                                name="url"
+                                placeholder="<?= l('global.url_slug_placeholder') ?>"
+                                value="<?= $data->link->url ?>"
+                                maxlength="<?= $this->user->plan_settings->url_maximum_characters ?? 64 ?>"
+                                onchange="update_this_value(this, get_slug)"
+                                onkeyup="update_this_value(this, get_slug)"
+                            <?= !$this->user->plan_settings->custom_url ? 'readonly="readonly"' : null ?>
+                            <?= $this->user->plan_settings->custom_url ? null : get_plan_feature_disabled_info() ?>
+                        />
+                    </div>
+                    <small class="form-text text-muted"><?= l('link.settings.url_help') ?></small>
+                </div>
+            <?php endif ?>
+
+            <?php if(empty($data->link->has_qr_code) && count($data->domains)): ?>
                 <div id="is_main_link_wrapper" class="form-group custom-control custom-switch">
                     <input id="is_main_link" name="is_main_link" type="checkbox" class="custom-control-input" <?= $data->link->domain_id && $data->domains[$data->link->domain_id]->link_id == $data->link->link_id ? 'checked="checked"' : null ?>>
                     <label class="custom-control-label" for="is_main_link"><?= l('link.settings.is_main_link') ?></label>

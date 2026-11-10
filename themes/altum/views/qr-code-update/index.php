@@ -120,9 +120,9 @@
                                     <?php $dynamic_link = $data->links[$data->qr_code->link_id]; ?>
                                     <input type="hidden" name="link_id" value="<?= $dynamic_link->link_id ?>" data-reload-qr-code />
 
-                                    <label for="dynamic_short_link"><i class="fas fa-fw fa-link fa-sm text-muted mr-1"></i> <?= l('qr_codes.input.dynamic_short_link') ?></label>
+                                    <label for="dynamic_short_link"><i class="fas fa-fw fa-link fa-sm text-muted mr-1"></i> <?= l('qr_codes.input.dynamic_short_link') ?> <span class="badge badge-primary ml-1"><i class="fas fa-lock fa-xs"></i> <?= l('global.locked') ?? 'Locked' ?></span></label>
                                     <div class="input-group">
-                                        <input id="dynamic_short_link" type="text" class="form-control" value="<?= $dynamic_link->full_url ?>" readonly="readonly" />
+                                        <input id="dynamic_short_link" type="text" class="form-control bg-light" value="<?= $dynamic_link->full_url ?>" readonly="readonly" />
                                         <div class="input-group-append">
                                             <button
                                                     type="button"
@@ -136,9 +136,6 @@
                                             >
                                                 <i class="fas fa-fw fa-sm fa-copy"></i>
                                             </button>
-                                            <a href="<?= url('link/' . $dynamic_link->link_id) ?>" class="btn btn-outline-secondary" data-toggle="tooltip" title="<?= l('qr_codes.input.dynamic_short_link_edit') ?>">
-                                                <i class="fas fa-fw fa-sm fa-pencil-alt"></i>
-                                            </a>
                                         </div>
                                     </div>
                                     <small class="form-text text-muted"><?= l('qr_codes.input.dynamic_short_link_help') ?></small>
@@ -159,12 +156,21 @@
                             </div>
 
                             <div class="form-group" data-type="url">
-                                <div class="custom-control custom-checkbox">
-                                    <input id="url_dynamic" name="url_dynamic" type="checkbox" class="custom-control-input" <?= ($data->qr_code->link_id ?? null) ? 'checked="checked"' : null ?> data-reload-qr-code />
-                                    <label class="custom-control-label" for="url_dynamic"><?= l('qr_codes.input.url_dynamic') ?></label>
-                                    <small class="form-text text-muted"><?= l('qr_codes.input.url_dynamic_help') ?></small>
-                                    <small class="form-text text-muted"><?= l('qr_codes.input.url_dynamic_help2') ?></small>
-                                </div>
+                                <?php if($data->qr_code->link_id): ?>
+                                    <input type="hidden" name="url_dynamic" value="on" />
+                                    <div class="custom-control custom-checkbox">
+                                        <input id="url_dynamic" type="checkbox" class="custom-control-input" checked="checked" disabled="disabled" />
+                                        <label class="custom-control-label font-weight-bold" for="url_dynamic"><?= l('qr_codes.input.url_dynamic') ?> <span class="badge badge-primary ml-1"><i class="fas fa-lock fa-xs"></i> <?= l('global.locked') ?? 'Locked' ?></span></label>
+                                        <small class="form-text text-muted"><?= l('qr_codes.input.url_dynamic_locked_help') ?></small>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="custom-control custom-checkbox">
+                                        <input id="url_dynamic" name="url_dynamic" type="checkbox" class="custom-control-input" data-reload-qr-code />
+                                        <label class="custom-control-label" for="url_dynamic"><?= l('qr_codes.input.url_dynamic') ?></label>
+                                        <small class="form-text text-muted"><?= l('qr_codes.input.url_dynamic_help') ?></small>
+                                        <small class="form-text text-muted"><?= l('qr_codes.input.url_dynamic_help2') ?></small>
+                                    </div>
+                                <?php endif ?>
                             </div>
                         </div>
 
