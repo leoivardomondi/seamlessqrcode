@@ -213,6 +213,25 @@
 
     <?php if(is_logged_in()): ?>
 
+        <?php
+        $sidebar_user_is_paid = $this->user->plan_id != 'free' && (empty($this->user->plan_expiration_date) || (new \DateTime($this->user->plan_expiration_date)) > (new \DateTime()));
+        $sidebar_user_plan_is_expired = ($this->user->plan_is_expired ?? false) || ($this->user->plan_id != 'free' && !empty($this->user->plan_expiration_date) && (new \DateTime($this->user->plan_expiration_date)) <= (new \DateTime()));
+        ?>
+
+        <?php if(!$sidebar_user_is_paid): ?>
+            <div class="px-3 mb-3 d-none d-md-block app-sidebar-pay-wrapper">
+                <?php if($sidebar_user_plan_is_expired): ?>
+                    <a href="<?= url('plan/renew') ?>" class="btn btn-sm btn-block btn-warning font-weight-bold shadow-sm text-dark">
+                        <i class="fas fa-fw fa-sync-alt mr-1"></i> Reactivate Plan
+                    </a>
+                <?php else: ?>
+                    <a href="<?= url('plan') ?>" class="btn btn-sm btn-block btn-primary font-weight-bold shadow-sm">
+                        <i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now
+                    </a>
+                <?php endif ?>
+            </div>
+        <?php endif ?>
+
         <div class="app-sidebar-footer dropdown">
             <a href="#" class="dropdown-toggle dropdown-toggle-simple" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <div class="d-flex align-items-center app-sidebar-footer-block">

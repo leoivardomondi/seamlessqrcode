@@ -58,6 +58,25 @@
 
                     <li class="nav-item"><a class="nav-link" href="<?= url('dashboard') ?>"><?= l('dashboard.menu') ?></a></li>
 
+                    <?php
+                    $nav_user_is_paid = $this->user->plan_id != 'free' && (empty($this->user->plan_expiration_date) || (new \DateTime($this->user->plan_expiration_date)) > (new \DateTime()));
+                    $nav_user_plan_is_expired = ($this->user->plan_is_expired ?? false) || ($this->user->plan_id != 'free' && !empty($this->user->plan_expiration_date) && (new \DateTime($this->user->plan_expiration_date)) <= (new \DateTime()));
+                    ?>
+
+                    <?php if(!$nav_user_is_paid): ?>
+                        <li class="nav-item d-flex align-items-center my-2 my-lg-0 ml-lg-2">
+                            <?php if($nav_user_plan_is_expired): ?>
+                                <a href="<?= url('plan/renew') ?>" class="btn btn-sm btn-warning font-weight-bold shadow-sm px-3 text-dark">
+                                    <i class="fas fa-fw fa-sync-alt mr-1"></i> Reactivate Subscription
+                                </a>
+                            <?php else: ?>
+                                <a href="<?= url('plan') ?>" class="btn btn-sm btn-primary font-weight-bold shadow-sm px-3">
+                                    <i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now
+                                </a>
+                            <?php endif ?>
+                        </li>
+                    <?php endif ?>
+
                     <?php if(settings()->internal_notifications->users_is_enabled): ?>
                         <li class="nav-item dropdown" id="internal_notifications">
                             <a id="internal_notifications_link" href="#" class="nav-link dropdown-toggle dropdown-toggle-simple" data-internal-notifications="user" data-tooltip data-tooltip-hide-on-click title="<?= l('internal_notifications.menu') ?>" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-boundary="window">

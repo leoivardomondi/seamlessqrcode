@@ -38,7 +38,8 @@
 
         .admin-sidebar-collapse-btn {
             cursor: pointer !important;
-            z-index: 105 !important;
+            pointer-events: auto !important;
+            z-index: 9999 !important;
             position: relative;
             border: 1px solid var(--gray-200);
             border-radius: .35rem;

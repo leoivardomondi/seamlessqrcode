@@ -80,18 +80,6 @@ let init_admin_sidebar_collapse = () => {
             collapse_btn.addEventListener('click', event => {
                 if(typeof window.toggleAdminSidebarCollapse === 'function') {
                     window.toggleAdminSidebarCollapse(event);
-                } else {
-                    event.preventDefault();
-                    document.body.classList.toggle('admin-sidebar-collapsed');
-                    let is_collapsed = document.body.classList.contains('admin-sidebar-collapsed');
-                    try {
-                        localStorage.setItem('admin_sidebar_collapsed', is_collapsed ? 'true' : 'false');
-                    } catch(e) {}
-                    update_collapse_button_icon();
-
-                    setTimeout(() => {
-                        window.dispatchEvent(new Event('resize'));
-                    }, 250);
                 }
             });
         }

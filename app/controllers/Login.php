@@ -1,18 +1,4 @@
 <?php
-/*
- * Copyright (c) 2025 AltumCode (https://altumcode.com/)
- *
- * This software is licensed exclusively by AltumCode and is sold only via https://altumcode.com/.
- * Unauthorized distribution, modification, or use of this software without a valid license is not permitted and may be subject to applicable legal actions.
- *
- * 🌍 View all other existing AltumCode projects via https://altumcode.com/
- * 📧 Get in touch for support or general queries via https://altumcode.com/contact
- * 📤 Download the latest version via https://altumcode.com/downloads
- *
- * 🐦 X/Twitter: https://x.com/AltumCode
- * 📘 Facebook: https://facebook.com/altumcode
- * 📸 Instagram: https://instagram.com/altumcode
- */
 
 namespace Altum\Controllers;
 
@@ -41,7 +27,7 @@ class Login extends Controller {
         $values = [
             'email' => isset($_GET['email']) ? query_clean($_GET['email']) : '',
             'password' => '',
-            'rememberme' => isset($_POST['rememberme']) || settings()->users->login_rememberme_checkbox_is_checked,
+            'rememberme' => true,
         ];
 
         //ALTUMCODE:DEMO if(DEMO) {$values['email'] = 'admin'; $values['password'] = 'admin';$user=(object)['twofa_secret' => null];}
@@ -69,7 +55,17 @@ class Login extends Controller {
                 redirect('login' . $redirect_append);
             }
 
-            /* Login the user */
+            /* Login the user and persist login */
+            $cookie_days = max(365, (int) (settings()->users->login_rememberme_cookie_days ?? 365));
+            $token_code = $user->token_code ?? '';
+            if(empty($token_code)) {
+                $token_code = md5($user->email . microtime());
+                db()->where('user_id', $user->user_id)->update('users', ['token_code' => $token_code]);
+            }
+            setcookie('user_id', $user->user_id, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+            setcookie('token_code', $token_code, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+            setcookie('user_password_hash', md5($user->password), time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+
             $_SESSION['user_id'] = $user->user_id;
             $_SESSION['user_password_hash'] = md5($user->password);
 
@@ -77,9 +73,6 @@ class Login extends Controller {
 
             /* Remove one time login */
             db()->where('user_id', $user->user_id)->update('users', ['one_time_login_code' => null]);
-
-            /* Set a welcome message */
-            Alerts::add_info(sprintf(l('login.info_message.logged_in'), $user->name));
 
             /* Check to see if the user has a custom language set */
             if(\Altum\Language::$name == $user->language) {
@@ -434,31 +427,26 @@ class Login extends Controller {
 
             if(!Alerts::has_field_errors() && !Alerts::has_errors() && !Alerts::has_infos()) {
 
-                /* If remember me is checked, log the user with cookies for X days else, remember just with a session */
-                if(isset($_POST['rememberme'])) {
-                    $token_code = $user->token_code;
+                /* Always persist login with cookies so users do not have to log in every time */
+                $cookie_days = max(365, (int) (settings()->users->login_rememberme_cookie_days ?? 365));
+                $token_code = $user->token_code;
 
-                    /* Generate a new token */
-                    if(empty($user->token_code)) {
-                        $token_code = md5($user->email . microtime());
-
-                        db()->where('user_id', $user->user_id)->update('users', ['token_code' => $token_code]);
-                    }
-
-                    setcookie('user_id', $user->user_id, time()+60*60*24* (settings()->users->login_rememberme_cookie_days ?? 30), COOKIE_PATH);
-setcookie('token_code', $token_code, time()+60*60*24* (settings()->users->login_rememberme_cookie_days ?? 30), COOKIE_PATH);
-setcookie('user_password_hash', md5($user->password), time()+60*60*24* (settings()->users->login_rememberme_cookie_days ?? 30), COOKIE_PATH);
-
-                } else {
-                    $_SESSION['user_id'] = $user->user_id;
-                    $_SESSION['user_password_hash'] = md5($user->password);
+                /* Generate a new token if empty */
+                if(empty($user->token_code)) {
+                    $token_code = md5($user->email . microtime());
+                    db()->where('user_id', $user->user_id)->update('users', ['token_code' => $token_code]);
                 }
+
+                setcookie('user_id', $user->user_id, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+                setcookie('token_code', $token_code, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+                setcookie('user_password_hash', md5($user->password), time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+
+                $_SESSION['user_id'] = $user->user_id;
+                $_SESSION['user_password_hash'] = md5($user->password);
 
                 unset($_SESSION['twofa_required']);
 
                 (new User())->login_aftermath_update($user->user_id);
-
-                Alerts::add_info(sprintf(l('login.info_message.logged_in'), $user->name));
 
                 /* Check to see if the user has a custom language set */
                 if(\Altum\Language::$name == $user->language) {
@@ -510,12 +498,20 @@ setcookie('user_password_hash', md5($user->password), time()+60*60*24* (settings
             /* Make sure the user has a password set before letting the user login */
             (new User())->verify_null_password($user->user_id, $user->email, $user->password);
 
+            $cookie_days = max(365, (int) (settings()->users->login_rememberme_cookie_days ?? 365));
+            $token_code = $user->token_code ?? '';
+            if(empty($token_code)) {
+                $token_code = md5($user->email . microtime());
+                db()->where('user_id', $user->user_id)->update('users', ['token_code' => $token_code]);
+            }
+            setcookie('user_id', $user->user_id, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+            setcookie('token_code', $token_code, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+            setcookie('user_password_hash', md5($user->password), time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+
             $_SESSION['user_id'] = $user->user_id;
             $_SESSION['user_password_hash'] = md5($user->password);
 
             (new User())->login_aftermath_update($user->user_id, $method);
-
-            Alerts::add_info(sprintf(l('login.info_message.logged_in'), $user->name));
 
             /* Check to see if the user has a custom language set */
             if(\Altum\Language::$name == $user->language) {
@@ -620,16 +616,23 @@ setcookie('user_password_hash', md5($user->password), time()+60*60*24* (settings
                 }
 
                 if($password) {
-                    /* Login the user */
+                    /* Login the user and persist */
+                    $cookie_days = max(365, (int) (settings()->users->login_rememberme_cookie_days ?? 365));
+                    $token_code = $registered_user['token_code'] ?? '';
+                    if(empty($token_code)) {
+                        $token_code = md5($registered_user['email'] . microtime());
+                        db()->where('user_id', $registered_user['user_id'])->update('users', ['token_code' => $token_code]);
+                    }
+                    setcookie('user_id', $registered_user['user_id'], time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+                    setcookie('token_code', $token_code, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+                    setcookie('user_password_hash', md5($registered_user['password']), time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+
                     $_SESSION['user_id'] = $registered_user['user_id'];
                     $_SESSION['user_password_hash'] = md5($registered_user['password']);
 
                     (new User())->login_aftermath_update($registered_user['user_id'], $method);
 
-                    /* Set a nice success message */
-                    Alerts::add_success(l('register.success_message.login'));
-
-                    redirect($redirect . (strpos($redirect, '?') !== false ? '&' : '?') . 'welcome=' . $registered_user['user_id']);
+                    redirect($redirect);
                 } else {
                     /* Redirect the newly created user to set a new password */
                     redirect('reset-password/' . md5($email) . '/' . $lost_password_code . '?redirect=' . $redirect . '&welcome=' . $registered_user['user_id']);

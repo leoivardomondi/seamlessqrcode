@@ -54,7 +54,7 @@
 
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
             <div class="custom-control custom-checkbox" data-toggle="tooltip" title="<?= sprintf(l('login.remember_me_help'), settings()->users->login_rememberme_cookie_days ?? 30) ?>" data-tooltip-hide-on-click>
-                <input type="checkbox" name="rememberme" class="custom-control-input" id="rememberme" <?= $data->values['rememberme'] ? 'checked="checked"' : null ?>>
+                <input type="checkbox" name="rememberme" class="custom-control-input" id="rememberme" <?= ($data->values['rememberme'] ?? true) ? 'checked="checked"' : 'checked="checked"' ?>>
                 <label class="custom-control-label" for="rememberme"><small class="text-muted"><?= l('login.remember_me') ?></small></label>
             </div>
 

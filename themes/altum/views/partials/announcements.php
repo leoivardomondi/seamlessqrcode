@@ -1,5 +1,11 @@
 <?php defined('ALTUMCODE') || die() ?>
-<?php $has_announcements = false ?>
+<?php
+/* Deactivate announcement notifications for logged in users */
+if(is_logged_in()) {
+    return;
+}
+$has_announcements = false;
+?>
 <?php foreach(['guests', 'users'] as $type): ?>
     <?php if(
         settings()->announcements->{$type . '_is_enabled'}

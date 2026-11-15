@@ -3,8 +3,9 @@
 
 <section class="admin-sidebar">
     <div class="admin-sidebar-title">
-        <div
-                class="h3 m-0 text-decoration-none text-truncate"
+        <a
+                href="<?= url('admin/') ?>"
+                class="h3 m-0 text-decoration-none text-truncate d-flex align-items-center"
                 data-logo
                 data-light-value="<?= settings()->main->logo_light != '' ? settings()->main->logo_light_full_url : settings()->main->title ?>"
                 data-light-class="<?= settings()->main->logo_light != '' ? 'img-fluid admin-navbar-logo' : 'admin-navbar-brand text-truncate' ?>"
@@ -12,29 +13,46 @@
                 data-dark-value="<?= settings()->main->logo_dark != '' ? settings()->main->logo_dark_full_url : settings()->main->title ?>"
                 data-dark-class="<?= settings()->main->logo_dark != '' ? 'img-fluid admin-navbar-logo' : 'admin-navbar-brand text-truncate' ?>"
                 data-dark-tag="<?= settings()->main->logo_dark != '' ? 'img' : 'div' ?>"
-
                 id="sidebar_title"
-                tabindex="0"
-                data-toggle="tooltip"
-                data-placement="right"
-                data-html="true"
-                data-trigger="hover"
-                data-delay='{ "hide": 5500 }'
-                title="
-            <div class='d-flex text-left flex-column'>
-                <div class='mb-2'><a href='<?= url() ?>' class='text-gray-50 text-decoration-none'>🌐 &nbsp; <?= l('index.menu') ?></a></div>
-                <div><a href='<?= url('dashboard') ?>' class='text-gray-50 text-decoration-none'>🖥️ &nbsp; <?= l('dashboard.menu') ?></a></div>
-            </div>
-            "
         >
             <?php if(settings()->main->{'logo_' . \Altum\ThemeStyle::get()} != ''): ?>
                 <img src="<?= settings()->main->{'logo_' . \Altum\ThemeStyle::get() . '_full_url'} ?>" class="img-fluid admin-navbar-logo" alt="<?= l('global.accessibility.logo_alt') ?>" />
             <?php else: ?>
                 <div class="admin-navbar-brand text-truncate"><?= settings()->main->title ?></div>
             <?php endif ?>
-        </div>
+        </a>
 
-        <button type="button" id="admin_sidebar_collapse" onclick="window.toggleAdminSidebarCollapse(event)" class="btn btn-sm btn-link text-muted p-1 ml-auto admin-sidebar-collapse-btn d-none d-md-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
+        <script>
+            window.toggleAdminSidebarCollapse = function(event) {
+                if(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                if(window.innerWidth < 992 || document.body.classList.contains('admin-sidebar-opened')) {
+                    document.body.classList.toggle('admin-sidebar-opened');
+                    var overlay = document.querySelector('#admin_overlay');
+                    if(overlay) {
+                        overlay.style.display = document.body.classList.contains('admin-sidebar-opened') ? 'block' : 'none';
+                    }
+                    return;
+                }
+                document.body.classList.toggle('admin-sidebar-collapsed');
+                var is_collapsed = document.body.classList.contains('admin-sidebar-collapsed');
+                try {
+                    localStorage.setItem('admin_sidebar_collapsed', is_collapsed ? 'true' : 'false');
+                } catch(e) {}
+                var btn = document.querySelector('#admin_sidebar_collapse');
+                if(btn) {
+                    btn.innerHTML = is_collapsed ? '<i class="fas fa-fw fa-arrow-right"></i>' : '<i class="fas fa-fw fa-bars"></i>';
+                    btn.setAttribute('title', is_collapsed ? 'Expand sidebar' : 'Squeeze / Collapse sidebar');
+                }
+                setTimeout(function() {
+                    window.dispatchEvent(new Event('resize'));
+                }, 220);
+            };
+        </script>
+
+        <button type="button" id="admin_sidebar_collapse" onclick="window.toggleAdminSidebarCollapse(event)" class="btn btn-sm btn-link text-muted p-1 ml-auto admin-sidebar-collapse-btn d-inline-flex" title="Squeeze / Expand sidebar" aria-label="Toggle sidebar">
             <i class="fas fa-fw fa-bars"></i>
         </button>
     </div>

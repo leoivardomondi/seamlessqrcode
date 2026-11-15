@@ -1,21 +1,6 @@
 <?php
-/*
- * Copyright (c) 2026 AltumCode (https://altumcode.com/)
- *
- * This software is licensed exclusively by AltumCode and is sold only via https://altumcode.com/.
- * Unauthorized distribution, modification, or use of this software without a valid license is not permitted and may be subject to applicable legal actions.
- *
- * 🌍 View all other existing AltumCode projects via https://altumcode.com/
- * 📧 Get in touch for support or general queries via https://altumcode.com/contact
- * 📤 Download the latest version via https://altumcode.com/downloads
- *
- * 🐦 X/Twitter: https://x.com/AltumCode
- * 📘 Facebook: https://facebook.com/altumcode
- * 📸 Instagram: https://instagram.com/altumcode
- */
 
 namespace Altum\Controllers;
-
 
 use Altum\Title;
 
@@ -29,16 +14,8 @@ class Plan extends Controller {
             throw_404();
         }
 
-        /* New users must complete the phone and industry setup before seeing plans. */
         if(is_logged_in()) {
             (new \Altum\Models\User())->check_and_enforce_trial_eligibility($this->user);
-
-            $user_extra = json_decode($this->user->extra ?? '') ?: (object) [];
-            $user_phone = preg_replace('/\D+/', '', (string) ($this->user->billing->phone ?? ''));
-
-            if(!$user_phone || empty($user_extra->signup_industry)) {
-                redirect('dashboard?welcome=1');
-            }
         }
 
         $type = isset($this->params[0]) && in_array($this->params[0], ['renew', 'upgrade', 'new']) ? $this->params[0] : 'new';

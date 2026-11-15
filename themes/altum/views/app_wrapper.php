@@ -140,6 +140,10 @@
             body.app-sidebar-collapsed .app-sidebar-avatar {
                 margin-right: 0 !important;
             }
+
+            body.app-sidebar-collapsed .app-sidebar-pay-wrapper {
+                display: none !important;
+            }
         }
     </style>
 

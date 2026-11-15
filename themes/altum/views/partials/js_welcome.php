@@ -1,6 +1,8 @@
 <?php defined('ALTUMCODE') || die(); ?>
-
-<?php $welcome_extra = json_decode(user()->extra ?? '') ?: (object) []; ?>
+<?php
+/* Deactivate all welcome modal popups and custom notifications */
+return;
+?>
 
 <?php if(is_logged_in()): ?>
     <?php if((user()->country ?? null) == 'KE' && empty(user()->billing->phone)): ?>

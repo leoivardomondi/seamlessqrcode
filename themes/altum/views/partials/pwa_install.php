@@ -1,4 +1,5 @@
 <?php defined('ALTUMCODE') || die() ?>
+<?php return; ?>
 
 <?php if(\Altum\Authentication::check()): ?>
 <div class="modal fade" id="standard_pwa_install_modal" tabindex="-1" role="dialog" aria-hidden="true">

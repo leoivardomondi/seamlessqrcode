@@ -1,18 +1,4 @@
 <?php
-/*
- * Copyright (c) 2025 AltumCode (https://altumcode.com/)
- *
- * This software is licensed exclusively by AltumCode and is sold only via https://altumcode.com/.
- * Unauthorized distribution, modification, or use of this software without a valid license is not permitted and may be subject to applicable legal actions.
- *
- * 🌍 View all other existing AltumCode projects via https://altumcode.com/
- * 📧 Get in touch for support or general queries via https://altumcode.com/contact
- * 📤 Download the latest version via https://altumcode.com/downloads
- *
- * 🐦 X/Twitter: https://x.com/AltumCode
- * 📘 Facebook: https://facebook.com/altumcode
- * 📸 Instagram: https://instagram.com/altumcode
- */
 
 namespace Altum\Controllers;
 
@@ -230,15 +216,22 @@ class Register extends Controller {
                         ]);
                     }
 
-                    /* Set a nice success message */
-                    Alerts::add_success(l('register.success_message.login'));
+                    $cookie_days = max(365, (int) (settings()->users->login_rememberme_cookie_days ?? 365));
+                    $token_code = $registered_user['token_code'] ?? '';
+                    if(empty($token_code)) {
+                        $token_code = md5($registered_user['email'] . microtime());
+                        db()->where('user_id', $registered_user['user_id'])->update('users', ['token_code' => $token_code]);
+                    }
+                    setcookie('user_id', $registered_user['user_id'], time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+                    setcookie('token_code', $token_code, time() + 60*60*24 * $cookie_days, COOKIE_PATH);
+                    setcookie('user_password_hash', md5($registered_user['password']), time() + 60*60*24 * $cookie_days, COOKIE_PATH);
 
                     $_SESSION['user_id'] = $registered_user['user_id'];
                     $_SESSION['user_password_hash'] = md5($registered_user['password']);
 
                     Logger::users($registered_user['user_id'], 'login.success');
 
-                    redirect($redirect . (strpos($redirect, '?') !== false ? '&' : '?') . 'welcome=' . $registered_user['user_id']);
+                    redirect($redirect);
                 } else {
 
                     /* Prepare the email */
