@@ -1,4 +1,7 @@
 <?php
+/*
+ * Copyright (c) 2025 leoivard
+ */
 
 namespace Altum\Controllers;
 
