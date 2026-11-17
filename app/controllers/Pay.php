@@ -1247,6 +1247,7 @@ class Pay extends Controller {
 
             /* Send rich user confirmation email */
             \Altum\Models\Payments::send_user_payment_confirmation_email($this->user, $plan, [
+                'payment_id' => $payment_id,
                 'total_amount' => $formatted_price,
                 'currency' => settings()->payment->default_currency,
                 'frequency' => $_POST['payment_frequency'],

@@ -15,9 +15,24 @@ class Invoice extends Controller {
 
     public function index() {
 
-        \Altum\Authentication::guard();
-
         $id = isset($this->params[0]) ? (int) $this->params[0] : null;
+
+        /* Allow direct access from email link if email matches payment recipient */
+        if(!\Altum\Authentication::check() && !empty($_GET['email']) && $id) {
+            $payment_check = db()->where('id', $id)->getOne('payments', ['user_id', 'email']);
+            if($payment_check && (strtolower(trim($payment_check->email)) === strtolower(trim($_GET['email'])))) {
+                $customer_user = db()->where('user_id', $payment_check->user_id)->getOne('users');
+                if($customer_user) {
+                    $customer_user->billing = json_decode($customer_user->billing ?? '');
+                    $customer_user->preferences = json_decode($customer_user->preferences ?? '');
+                    $this->user = $customer_user;
+                }
+            }
+        }
+
+        if(!\Altum\Authentication::check() && empty($this->user)) {
+            \Altum\Authentication::guard();
+        }
 
         /* Make sure the campaign exists and is accessible to the user */
         if(!$payment = db()->where('id', $id)->getOne('payments')) {
@@ -194,9 +209,24 @@ class Invoice extends Controller {
 
     public function download() {
 
-        \Altum\Authentication::guard();
-
         $id = isset($this->params[0]) ? (int) $this->params[0] : null;
+
+        /* Allow direct download from email link if email matches payment recipient */
+        if(!\Altum\Authentication::check() && !empty($_GET['email']) && $id) {
+            $payment_check = db()->where('id', $id)->getOne('payments', ['user_id', 'email']);
+            if($payment_check && (strtolower(trim($payment_check->email)) === strtolower(trim($_GET['email'])))) {
+                $customer_user = db()->where('user_id', $payment_check->user_id)->getOne('users');
+                if($customer_user) {
+                    $customer_user->billing = json_decode($customer_user->billing ?? '');
+                    $customer_user->preferences = json_decode($customer_user->preferences ?? '');
+                    $this->user = $customer_user;
+                }
+            }
+        }
+
+        if(!\Altum\Authentication::check() && empty($this->user)) {
+            \Altum\Authentication::guard();
+        }
 
         if(!$payment = db()->where('id', $id)->getOne('payments')) {
             redirect();

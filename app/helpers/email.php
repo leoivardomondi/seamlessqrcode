@@ -110,17 +110,33 @@ function send_mail($to, $title, $content, $data = [], $reply_to = null, $debug =
 
     extract(process_send_mail_template($title, $content, $data));
 
-    /* Use sendmail from server */
-    if(empty(settings()->smtp->host)) {
+    $has_attachments = !empty($data['string_attachments']) || !empty($data['attachments']);
+
+    /* Use sendmail from server only when no attachments and no SMTP host configured */
+    if(empty(settings()->smtp->host) && !$has_attachments) {
         return send_server_mail($to, settings()->smtp->from, $title, $email_template, $reply_to);
     }
 
-    /* Use phpmailer SMTP */
+    /* Use phpmailer */
     try {
         /* Initiate phpMailer */
         $mail = new \PHPMailer\PHPMailer\PHPMailer();
         $mail->CharSet = 'UTF-8';
-        $mail->isSMTP();
+
+        if(empty(settings()->smtp->host)) {
+            $mail->isMail();
+        } else {
+            $mail->isSMTP();
+            /* SMTP settings */
+            if(settings()->smtp->encryption != '0') {
+                $mail->SMTPSecure = settings()->smtp->encryption;
+            }
+            $mail->SMTPAuth = settings()->smtp->auth;
+            $mail->Host = settings()->smtp->host;
+            $mail->Port = settings()->smtp->port;
+            $mail->Username = settings()->smtp->username;
+            $mail->Password = settings()->smtp->password;
+        }
         $mail->isHTML(true);
 
         /* Set the debugging for phpMailer */
@@ -184,6 +200,36 @@ function send_mail($to, $title, $content, $data = [], $reply_to = null, $debug =
         $mail->Subject = $title;
         $mail->Body = $email_template;
         $mail->AltBody = strip_tags($mail->Body);
+
+        /* Process string attachments (e.g. dynamic PDF invoices) */
+        if(!empty($data['string_attachments']) && is_array($data['string_attachments'])) {
+            foreach($data['string_attachments'] as $attachment) {
+                if(!empty($attachment['content']) && !empty($attachment['name'])) {
+                    $mail->addStringAttachment(
+                        $attachment['content'],
+                        $attachment['name'],
+                        $attachment['encoding'] ?? 'base64',
+                        $attachment['type'] ?? 'application/pdf'
+                    );
+                }
+            }
+        }
+
+        /* Process file attachments */
+        if(!empty($data['attachments']) && is_array($data['attachments'])) {
+            foreach($data['attachments'] as $attachment) {
+                if(is_string($attachment) && file_exists($attachment)) {
+                    $mail->addAttachment($attachment);
+                } else if(is_array($attachment) && !empty($attachment['path']) && file_exists($attachment['path'])) {
+                    $mail->addAttachment(
+                        $attachment['path'],
+                        $attachment['name'] ?? '',
+                        $attachment['encoding'] ?? 'base64',
+                        $attachment['type'] ?? ''
+                    );
+                }
+            }
+        }
 
         /* Save errors in array for debugging */
         $errors = [];
