@@ -93,6 +93,28 @@ class Payments extends Model {
         $renewal_period = $subscription_model->calculate_renewal_period($current_plan_expiration_date, $payment_frequency, $payment_datetime);
         $plan_expiration_date = $renewal_period['period_end'];
 
+        /* When payment is registered, try matching an invoice */
+        $matched_invoice = null;
+        try {
+            $matched_invoice = $subscription_model->match_invoice_for_payment($payment_id, [
+                'invoice_id' => !empty($extra_data['invoice_id']) ? (int) $extra_data['invoice_id'] : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null),
+                'external_payment_id' => $external_payment_id,
+                'payment_processor' => $payment_processor,
+                'payment_total' => $payment_total,
+                'total_amount_default_currency' => $total_amount_default_currency,
+                'payment_currency' => $payment_currency,
+                'user_id' => $user_id,
+                'plan_id' => $plan_id,
+                'payment_frequency' => $payment_frequency,
+                'code' => $code ? $code->code : null,
+                'payment_status' => 1,
+                'is_approved' => true,
+                'payment_datetime' => $payment_datetime,
+            ]);
+        } catch(\Throwable $exception) {
+            if(DEBUG) error_log($exception->getMessage());
+        }
+
         try {
             $subscription_model->sync_from_successful_payment([
                 'local_payment_id' => $payment_id,
@@ -116,7 +138,9 @@ class Payments extends Model {
                 'period_end' => $plan_expiration_date,
                 'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
                 'business' => json_encode(settings()->business),
-                'invoice_id' => !empty($extra_data['invoice_id']) ? (int) $extra_data['invoice_id'] : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null),
+                'payment_status' => 1,
+                'is_approved' => true,
+                'invoice_id' => $matched_invoice ? $matched_invoice->invoice_id : (!empty($extra_data['invoice_id']) ? (int) $extra_data['invoice_id'] : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null)),
             ]);
         } catch(\Exception $exception) {
             if(DEBUG) {
@@ -299,6 +323,10 @@ class Payments extends Model {
         $payment->business->invoice_nr_prefix = in_array($prefix, ['', 'INV-'], true) ? 'INV-642021' : $prefix;
 
         $linked_invoice = db()->where('payment_id', $payment->id)->orderBy('invoice_id', 'DESC')->getOne('invoices');
+
+        if(!$linked_invoice) {
+            $linked_invoice = (new \Altum\Models\Subscription())->match_invoice_for_payment($payment->id);
+        }
 
         if($linked_invoice) {
             $metadata = json_decode($linked_invoice->metadata ?? '', true);

@@ -507,8 +507,14 @@ class Subscription extends Model {
             return null;
         }
 
-        /* 1. Explicit invoice target (e.g. from payment redirect or explicit criteria) */
+        /* 1. Explicit invoice target (e.g. from payment redirect, request, or extracted from payment proof/code) */
         $target_invoice_id = !empty($criteria['invoice_id']) ? (int) $criteria['invoice_id'] : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null);
+        if(!$target_invoice_id) {
+            $search_text = ($criteria['code'] ?? '') . ' ' . ($criteria['external_payment_id'] ?? '') . ' ' . ($criteria['confirmation_message'] ?? '') . ' ' . ($criteria['payment_proof'] ?? '') . ' ' . ($criteria['offline_payment_proof_text'] ?? '');
+            if(preg_match('/(?:inv(?:oice)?|proforma|account\s+number)[-_#\s]*([0-9]{1,10})/i', $search_text, $matches)) {
+                $target_invoice_id = (int) $matches[1];
+            }
+        }
         if($target_invoice_id) {
             $explicit_invoice = db()
                 ->where('invoice_id', $target_invoice_id)
@@ -520,7 +526,31 @@ class Subscription extends Model {
             }
         }
 
-        /* 2. Retrieve unpaid candidate invoices for this user */
+        /* 2. Check if an invoice is already linked to this local payment */
+        if(!empty($criteria['local_payment_id'])) {
+            $linked_invoice = db()
+                ->where('user_id', $user_id)
+                ->where('payment_id', (int) $criteria['local_payment_id'])
+                ->getOne('invoices');
+            if($linked_invoice) {
+                return $linked_invoice;
+            }
+        }
+
+        /* 3. Check if an open invoice matches the external payment ID or code */
+        $external_payment_id = !empty($criteria['external_payment_id']) ? (string) $criteria['external_payment_id'] : (!empty($criteria['code']) ? (string) $criteria['code'] : '');
+        if($external_payment_id) {
+            $code_matched = db()
+                ->where('user_id', $user_id)
+                ->where('status', 'paid', '!=')
+                ->where('external_payment_id', $external_payment_id)
+                ->getOne('invoices');
+            if($code_matched) {
+                return $code_matched;
+            }
+        }
+
+        /* 4. Retrieve unpaid candidate invoices for this user */
         $candidates = db()
             ->where('user_id', $user_id)
             ->where('status', 'paid', '!=')
@@ -534,11 +564,22 @@ class Subscription extends Model {
         $subscription_id = !empty($criteria['subscription_id']) ? (int) $criteria['subscription_id'] : 0;
         $plan_id = !empty($criteria['plan_id']) ? (string) $criteria['plan_id'] : '';
         $frequency = !empty($criteria['payment_frequency']) ? (string) $criteria['payment_frequency'] : (!empty($criteria['frequency']) ? (string) $criteria['frequency'] : '');
-        $currency = !empty($criteria['payment_currency']) ? strtoupper((string) $criteria['payment_currency']) : (!empty($criteria['currency']) ? strtoupper((string) $criteria['currency']) : '');
+        $currency = !empty($criteria['payment_currency']) ? strtoupper((string) $criteria['payment_currency']) : (!empty($criteria['currency']) ? strtoupper((string) $criteria['currency']) : strtoupper((string) (settings()->payment->default_currency ?? 'USD')));
         $total_amount = isset($criteria['payment_total']) ? (float) $criteria['payment_total'] : (isset($criteria['total_amount']) ? (float) $criteria['total_amount'] : (isset($criteria['base_amount']) ? (float) $criteria['base_amount'] : 0.0));
         $payment_datetime = $criteria['payment_datetime'] ?? get_date();
         $period_start = $criteria['period_start'] ?? null;
         $target_timestamp = strtotime($period_start ?: $payment_datetime);
+
+        /* Fast match if single candidate */
+        if(count($candidates) === 1) {
+            $single = $candidates[0];
+            if(!in_array($single->status, ['paid', 'canceled', 'uncollectible', 'void'], true)) {
+                $cand_total = (float) $single->total_amount;
+                if((string) $single->plan_id === (string) $plan_id || ($total_amount > 0 && abs($cand_total - $total_amount) < 0.05) || $single->type === 'proforma' || $single->processor === 'proforma') {
+                    return $single;
+                }
+            }
+        }
 
         $best_candidate = null;
         $best_score = -1;
@@ -627,8 +668,106 @@ class Subscription extends Model {
             }
         }
 
-        if($best_score >= 120 && $best_candidate) {
+        if($best_score >= 75 && $best_candidate) {
             return $best_candidate;
+        }
+
+        return null;
+    }
+
+    public function match_invoice_for_payment($payment_id, array $extra_criteria = []) {
+        $this->ensure_schema();
+
+        $payment_id = (int) $payment_id;
+        if(!$payment_id) {
+            return null;
+        }
+
+        $payment = db()->where('id', $payment_id)->getOne('payments');
+        if(!$payment) {
+            return null;
+        }
+
+        $user_id = (int) $payment->user_id;
+        $plan_id = (string) $payment->plan_id;
+        $currency = strtoupper((string) ($payment->currency ?: settings()->payment->default_currency));
+        $total_amount = (float) $payment->total_amount;
+        $frequency = (string) ($payment->frequency ?: 'monthly');
+        $is_paid = (int) ($extra_criteria['payment_status'] ?? ($payment->status ?? 0)) === 1 || !empty($extra_criteria['is_approved']);
+        $payment_datetime = $this->normalize_datetime($extra_criteria['payment_datetime'] ?? ($payment->datetime ?? null)) ?? get_date();
+
+        /* 1. Check if an invoice is ALREADY linked to this payment */
+        $linked_invoice = db()->where('payment_id', $payment_id)->orderBy('invoice_id', 'DESC')->getOne('invoices');
+        if($linked_invoice) {
+            if($is_paid && $linked_invoice->status !== 'paid') {
+                $this->mark_proforma_invoice_as_paid($linked_invoice->invoice_id, array_merge($extra_criteria, [
+                    'local_payment_id' => $payment_id,
+                    'external_payment_id' => $payment->payment_id,
+                    'payment_processor' => $payment->processor,
+                    'payment_total' => $total_amount,
+                    'payment_currency' => $currency,
+                    'payment_datetime' => $payment_datetime,
+                    'user_id' => $user_id,
+                    'plan_id' => $plan_id,
+                    'payment_frequency' => $frequency,
+                    'payment_status' => 1,
+                    'is_approved' => true,
+                ]));
+                return db()->where('invoice_id', $linked_invoice->invoice_id)->getOne('invoices');
+            }
+            return $linked_invoice;
+        }
+
+        /* 2. Build criteria to search for matching open/proforma invoice */
+        $matching_criteria = array_merge([
+            'user_id' => $user_id,
+            'plan_id' => $plan_id,
+            'payment_frequency' => $frequency,
+            'frequency' => $frequency,
+            'payment_total' => $total_amount,
+            'total_amount' => $total_amount,
+            'payment_currency' => $currency,
+            'currency' => $currency,
+            'payment_datetime' => $payment_datetime,
+            'local_payment_id' => $payment_id,
+            'external_payment_id' => $payment->payment_id,
+            'code' => $payment->code ?: $payment->payment_id,
+            'payment_status' => $is_paid ? 1 : 0,
+            'is_approved' => $is_paid,
+        ], $extra_criteria);
+
+        /* 3. Try to find the most qualified open/proforma invoice */
+        $matched_invoice = $this->find_most_qualified_proforma_invoice($matching_criteria);
+
+        if($matched_invoice) {
+            if($is_paid) {
+                $this->mark_proforma_invoice_as_paid($matched_invoice->invoice_id, $matching_criteria);
+            } else {
+                /* Link payment to invoice while pending */
+                $metadata = json_decode($matched_invoice->metadata ?? '{}', true) ?: [];
+                $metadata['matched_pending_payment_id'] = $payment_id;
+                $metadata['matched_datetime'] = get_date();
+                db()->where('invoice_id', $matched_invoice->invoice_id)->update('invoices', [
+                    'payment_id' => $payment_id,
+                    'metadata' => json_encode($metadata),
+                ]);
+            }
+
+            $this->log_event('subscription.invoice_matched_to_payment', [
+                'subscription_id' => $matched_invoice->subscription_id ?? null,
+                'invoice_id' => $matched_invoice->invoice_id,
+                'user_id' => $user_id,
+                'source' => 'payment_registration',
+                'idempotency_key' => 'match:payment:' . $payment_id . ':invoice:' . $matched_invoice->invoice_id,
+                'payload' => [
+                    'payment_id' => $payment_id,
+                    'is_paid' => $is_paid,
+                    'total_amount' => $total_amount,
+                    'currency' => $currency,
+                ],
+            ]);
+
+            return db()->where('invoice_id', $matched_invoice->invoice_id)->getOne('invoices');
         }
 
         return null;
@@ -707,12 +846,18 @@ class Subscription extends Model {
         $payment_processor = $data['payment_processor'] ?? ($invoice->processor === 'proforma' ? 'offline_payment' : $invoice->processor);
         $payment_type = $data['payment_type'] ?? ($invoice->type === 'proforma' ? 'one_time' : $invoice->type);
 
-        /* Only mark invoice as paid if an M-PESA message/reference is attached or payment was done online */
+        /* Only mark invoice as paid if an M-PESA message/reference is attached or payment was done online or payment is approved/paid */
         $is_online = ($payment_processor !== 'offline_payment' && $payment_processor !== 'proforma');
         $has_mpesa = !empty($data['confirmation_message']) || !empty($data['code']) || !empty($metadata['confirmation_message']) || !empty($metadata['code']) || !empty($data['payment_proof']) || !empty($data['offline_payment_proof_text']);
+        $is_approved_or_paid = (
+            !empty($data['is_approved'])
+            || (isset($data['payment_status']) && (int) $data['payment_status'] === 1)
+            || (isset($data['status']) && (int) $data['status'] === 1)
+            || (!empty($data['local_payment_id']) && db()->where('id', (int) $data['local_payment_id'])->where('status', 1)->has('payments'))
+        );
 
-        $invoice_status = ($is_online || $has_mpesa) ? 'paid' : 'draft';
-        $final_paid_datetime = ($is_online || $has_mpesa) ? $paid_datetime : null;
+        $invoice_status = ($is_online || $has_mpesa || $is_approved_or_paid) ? 'paid' : 'draft';
+        $final_paid_datetime = ($is_online || $has_mpesa || $is_approved_or_paid) ? $paid_datetime : null;
 
         $update_data = [
             'subscription_id' => $subscription_id ?: null,
@@ -802,7 +947,6 @@ class Subscription extends Model {
 
         if($external_payment_id) {
             $existing_invoice = db()
-                ->where('processor', $data['payment_processor'])
                 ->where('external_payment_id', $external_payment_id)
                 ->getOne('invoices', ['invoice_id']);
 
@@ -868,9 +1012,15 @@ class Subscription extends Model {
         $payment_processor = $data['payment_processor'] ?? 'offline_payment';
         $is_online = ($payment_processor !== 'offline_payment' && $payment_processor !== 'proforma');
         $has_mpesa = !empty($data['confirmation_message']) || !empty($data['code']) || !empty($metadata['confirmation_message']) || !empty($metadata['code']) || !empty($data['payment_proof']) || !empty($data['offline_payment_proof_text']);
+        $is_approved_or_paid = (
+            !empty($data['is_approved'])
+            || (isset($data['payment_status']) && (int) $data['payment_status'] === 1)
+            || (isset($data['status']) && (int) $data['status'] === 1)
+            || (!empty($data['local_payment_id']) && db()->where('id', (int) $data['local_payment_id'])->where('status', 1)->has('payments'))
+        );
 
-        $invoice_status = ($is_online || $has_mpesa) ? 'paid' : 'draft';
-        $final_paid_datetime = ($is_online || $has_mpesa) ? $paid_datetime : null;
+        $invoice_status = ($is_online || $has_mpesa || $is_approved_or_paid) ? 'paid' : 'draft';
+        $final_paid_datetime = ($is_online || $has_mpesa || $is_approved_or_paid) ? $paid_datetime : null;
 
         $invoice_id = db()->insert('invoices', [
             'subscription_id' => (int) $subscription_id,

@@ -1174,10 +1174,26 @@ class Pay extends Controller {
             'datetime' => $payment_datetime
         ]);
 
+        /* When payment is registered, try matching an invoice */
+        $subscription_model = new \Altum\Models\Subscription();
+        $matched_invoice = null;
+        try {
+            $matched_invoice = $subscription_model->match_invoice_for_payment($payment_id, [
+                'invoice_id' => !empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null,
+                'code' => $code ?: $external_payment_id,
+                'confirmation_message' => $_POST['offline_payment_proof_text'] ?? null,
+                'payment_proof' => $offline_payment_proof_file,
+                'payment_status' => $payment_status,
+                'is_approved' => (bool) $is_auto_activated,
+                'payment_datetime' => $payment_datetime,
+            ]);
+        } catch(\Throwable $exception) {
+            if(DEBUG) error_log($exception->getMessage());
+        }
+
         /* Process automatic account activation if valid payment info was extracted */
         if($is_auto_activated) {
             $current_plan_expiration_date = $this->plan_id == $this->user->plan_id ? $this->user->plan_expiration_date : '';
-            $subscription_model = new \Altum\Models\Subscription();
             $renewal_period = $subscription_model->calculate_renewal_period($current_plan_expiration_date, $_POST['payment_frequency'], $payment_datetime);
             $plan_expiration_date = $renewal_period['period_end'];
 
@@ -1220,14 +1236,16 @@ class Pay extends Controller {
                     'period_end' => $plan_expiration_date,
                     'billing' => settings()->payment->taxes_and_billing_is_enabled && $this->user->billing ? json_encode($this->user->billing) : null,
                     'business' => json_encode(settings()->business),
-                    'invoice_id' => !empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null,
+                    'payment_status' => 1,
+                    'is_approved' => true,
+                    'invoice_id' => $matched_invoice ? $matched_invoice->invoice_id : (!empty($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null),
                 ]);
             } catch(\Exception $exception) {
                 if(DEBUG) error_log($exception->getMessage());
             }
 
             /* Update proforma invoice if paying for an existing proforma */
-            $proforma_invoice_id = isset($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null;
+            $proforma_invoice_id = $matched_invoice ? $matched_invoice->invoice_id : (isset($_REQUEST['invoice_id']) ? (int) $_REQUEST['invoice_id'] : null);
             if($proforma_invoice_id) {
                 $subscription_model->mark_proforma_invoice_as_paid($proforma_invoice_id, [
                     'local_payment_id' => $payment_id,
@@ -1242,6 +1260,8 @@ class Pay extends Controller {
                     'payment_frequency' => $_POST['payment_frequency'],
                     'period_start' => $renewal_period['period_start'],
                     'period_end' => $plan_expiration_date,
+                    'payment_status' => 1,
+                    'is_approved' => true,
                 ]);
             }
 

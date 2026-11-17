@@ -164,8 +164,72 @@ class AdminPayments extends Controller {
             /* Clear the cache */
             cache()->deleteItemsByTag('user_id=' . $user->user_id);
 
+            /* Currency exchange in case its needed */
+            $total_amount_default_currency = $payment->total_amount;
+
+            if(settings()->payment->default_currency != $payment->currency && settings()->payment->currency_exchange_api_key) {
+                try {
+                    $response = \Unirest\Request::get('https://api.freecurrencyapi.com/v1/latest?apikey=' . settings()->payment->currency_exchange_api_key . '&base_currency=' . $payment->currency . '&currencies=' . settings()->payment->default_currency);
+
+                    if($response->code == 200) {
+                        $total_amount_default_currency = $payment->total_amount * $response->body->data->{settings()->payment->default_currency};
+                        $total_amount_default_currency = number_format($total_amount_default_currency, 2, '.', '');
+                    }
+                } catch (\Exception $exception) {
+                    /* :) */
+                }
+            }
+
+            /* Update payment status */
+            db()->where('id', $payment_id)->update('payments', [
+                'total_amount_default_currency' => $total_amount_default_currency,
+                'status' => 1,
+            ]);
+
+            /* Try matching invoice and sync subscription */
+            $matched_invoice = null;
+            try {
+                $matched_invoice = $subscription_model->match_invoice_for_payment($payment_id, [
+                    'payment_status' => 1,
+                    'is_approved' => true,
+                    'payment_datetime' => $payment_datetime,
+                ]);
+
+                $subscription_model->sync_from_successful_payment([
+                    'local_payment_id' => $payment_id,
+                    'external_payment_id' => $payment->payment_id,
+                    'payment_processor' => $payment->processor ?: 'offline_payment',
+                    'payment_total' => $payment->total_amount,
+                    'total_amount_default_currency' => $total_amount_default_currency,
+                    'payment_currency' => $payment->currency,
+                    'user_id' => $user->user_id,
+                    'plan_id' => $payment->plan_id,
+                    'plan_name' => $plan->name,
+                    'payment_frequency' => $payment->frequency,
+                    'code' => $payment->code,
+                    'discount_amount' => $payment->discount_amount,
+                    'base_amount' => $payment->base_amount,
+                    'taxes_ids' => $payment->taxes_ids,
+                    'payment_type' => $payment->type,
+                    'payment_subscription_id' => null,
+                    'payment_datetime' => $payment_datetime,
+                    'period_start' => $renewal_period['period_start'],
+                    'period_end' => $plan_expiration_date,
+                    'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
+                    'business' => json_encode(settings()->business),
+                    'payment_status' => 1,
+                    'is_approved' => true,
+                    'invoice_id' => $matched_invoice ? $matched_invoice->invoice_id : null,
+                ]);
+            } catch(\Exception $exception) {
+                if(DEBUG) {
+                    error_log($exception->getMessage());
+                }
+            }
+
             /* Send rich confirmation notification to the user */
             \Altum\Models\Payments::send_user_payment_confirmation_email($user, $plan, [
+                'payment_id' => $payment_id,
                 'total_amount' => $payment->total_amount,
                 'currency' => $payment->currency,
                 'frequency' => $payment->frequency,
@@ -193,58 +257,6 @@ class AdminPayments extends Controller {
                     'datetime' => get_date(),
                 ]);
             }
-
-            /* Currency exchange in case its needed */
-            $total_amount_default_currency = $payment->total_amount;
-
-            if(settings()->payment->default_currency != $payment->currency && settings()->payment->currency_exchange_api_key) {
-                try {
-                    $response = \Unirest\Request::get('https://api.freecurrencyapi.com/v1/latest?apikey=' . settings()->payment->currency_exchange_api_key . '&base_currency=' . $payment->currency . '&currencies=' . settings()->payment->default_currency);
-
-                    if($response->code == 200) {
-                        $total_amount_default_currency = $payment->total_amount * $response->body->data->{settings()->payment->default_currency};
-                        $total_amount_default_currency = number_format($total_amount_default_currency, 2, '.', '');
-                    }
-                } catch (\Exception $exception) {
-                    /* :) */
-                }
-            }
-
-            try {
-                $subscription_model->sync_from_successful_payment([
-                    'local_payment_id' => $payment_id,
-                    'external_payment_id' => $payment->payment_id,
-                    'payment_processor' => $payment->processor ?: 'offline_payment',
-                    'payment_total' => $payment->total_amount,
-                    'total_amount_default_currency' => $total_amount_default_currency,
-                    'payment_currency' => $payment->currency,
-                    'user_id' => $user->user_id,
-                    'plan_id' => $payment->plan_id,
-                    'plan_name' => $plan->name,
-                    'payment_frequency' => $payment->frequency,
-                    'code' => $payment->code,
-                    'discount_amount' => $payment->discount_amount,
-                    'base_amount' => $payment->base_amount,
-                    'taxes_ids' => $payment->taxes_ids,
-                    'payment_type' => $payment->type,
-                    'payment_subscription_id' => null,
-                    'payment_datetime' => $payment_datetime,
-                    'period_start' => $renewal_period['period_start'],
-                    'period_end' => $plan_expiration_date,
-                    'billing' => settings()->payment->taxes_and_billing_is_enabled && $user->billing ? $user->billing : null,
-                    'business' => json_encode(settings()->business),
-                ]);
-            } catch(\Exception $exception) {
-                if(DEBUG) {
-                    error_log($exception->getMessage());
-                }
-            }
-
-            /* Update the payment */
-            db()->where('id', $payment_id)->update('payments', [
-                'total_amount_default_currency' => $total_amount_default_currency,
-                'status' => 1,
-            ]);
 
             /* Affiliate */
             (new Payments())->affiliate_payment_check($payment_id, $total_amount_default_currency, settings()->payment->default_currency, $user);

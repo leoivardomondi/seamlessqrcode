@@ -59,6 +59,10 @@ class Invoice extends Controller {
 
         $linked_invoice = db()->where('payment_id', $payment->id)->orderBy('invoice_id', 'DESC')->getOne('invoices');
 
+        if(!$linked_invoice) {
+            $linked_invoice = (new Subscription())->match_invoice_for_payment($payment->id);
+        }
+
         if($linked_invoice) {
             $this->apply_invoice_data_to_payment($payment, $linked_invoice);
         } else {
@@ -393,6 +397,10 @@ class Invoice extends Controller {
         $this->normalize_invoice_prefix($payment->business);
 
         $linked_invoice = db()->where('payment_id', $payment->id)->orderBy('invoice_id', 'DESC')->getOne('invoices');
+
+        if(!$linked_invoice) {
+            $linked_invoice = (new Subscription())->match_invoice_for_payment($payment->id);
+        }
 
         if($linked_invoice) {
             $this->apply_invoice_data_to_payment($payment, $linked_invoice);
