@@ -233,6 +233,22 @@ class AdminSubscriptions extends Controller {
         );
 
         if($result) {
+            /* Send rich confirmation email to user for manual payment registration */
+            $user = db()->where('user_id', $subscription->user_id)->getOne('users');
+            $plan = (new \Altum\Models\Plan())->get_plan_by_id($subscription->plan_id);
+            if($user && $plan) {
+                \Altum\Models\Payments::send_user_payment_confirmation_email($user, $plan, [
+                    'total_amount' => $result['amount'],
+                    'currency' => $result['currency'],
+                    'frequency' => $result['frequency'],
+                    'processor' => 'offline_payment',
+                    'payment_code' => $_POST['code'] ?: ('SUB-' . $subscription->subscription_id),
+                    'code' => $_POST['code'],
+                    'confirmation_message' => $_POST['confirmation_message'] ?? null,
+                    'expiration_date' => $result['period_end'],
+                ]);
+            }
+
             Alerts::add_success(sprintf(
                 l('admin_subscriptions.success_message.manual_period_applied'),
                 nr($result['amount'], 2) . ' ' . $result['currency'],

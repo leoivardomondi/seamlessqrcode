@@ -1245,20 +1245,17 @@ class Pay extends Controller {
                 ]);
             }
 
-            /* Send user confirmation email */
-            $email_template = get_email_template(
-                [],
-                l('global.emails.user_payment.subject'),
-                [
-                    '{{NAME}}' => $this->user->name,
-                    '{{PLAN_NAME}}' => $plan->name,
-                    '{{PLAN_EXPIRATION_DATE}}' => \Altum\Date::get($plan_expiration_date, 2),
-                    '{{USER_PLAN_LINK}}' => url('account-plan'),
-                    '{{USER_PAYMENTS_LINK}}' => url('account-payments'),
-                ],
-                l('global.emails.user_payment.body')
-            );
-            send_mail($this->user->email, $email_template->subject, $email_template->body, ['anti_phishing_code' => $this->user->anti_phishing_code, 'language' => $this->user->language]);
+            /* Send rich user confirmation email */
+            \Altum\Models\Payments::send_user_payment_confirmation_email($this->user, $plan, [
+                'total_amount' => $formatted_price,
+                'currency' => settings()->payment->default_currency,
+                'frequency' => $_POST['payment_frequency'],
+                'processor' => 'offline_payment',
+                'payment_code' => $external_payment_id,
+                'code' => $external_payment_id,
+                'confirmation_message' => $_POST['offline_payment_proof_text'] ?? null,
+                'expiration_date' => $plan_expiration_date,
+            ]);
 
             /* Check affiliate */
             (new \Altum\Models\Payments())->affiliate_payment_check($payment_id, $formatted_price, settings()->payment->default_currency, $this->user);

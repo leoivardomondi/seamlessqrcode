@@ -100,21 +100,16 @@ class WebhookPayu extends Controller {
                     /* Clear the cache */
                     cache()->deleteItemsByTag('user_id=' . $user->user_id);
 
-                    /* Send notification to the user */
-                    $email_template = get_email_template(
-                        [],
-                        l('global.emails.user_payment.subject'),
-                        [
-                            '{{NAME}}' => $user->name,
-                            '{{PLAN_NAME}}' => $plan->name,
-                            '{{PLAN_EXPIRATION_DATE}}' => Date::get($plan_expiration_date, 2),
-                            '{{USER_PLAN_LINK}}' => url('account-plan'),
-                            '{{USER_PAYMENTS_LINK}}' => url('account-payments'),
-                        ],
-                        l('global.emails.user_payment.body')
-                    );
-
-                    send_mail($user->email, $email_template->subject, $email_template->body, ['anti_phishing_code' => $user->anti_phishing_code, 'language' => $user->language]);
+                    /* Send rich confirmation notification to the user */
+                    \Altum\Models\Payments::send_user_payment_confirmation_email($user, $plan, [
+                        'total_amount' => $payment->total_amount,
+                        'currency' => $payment->currency,
+                        'frequency' => $payment->frequency,
+                        'processor' => 'payu',
+                        'payment_code' => $payment->code ?: $payment->payment_id,
+                        'code' => $payment->code,
+                        'expiration_date' => $plan_expiration_date,
+                    ]);
 
                     /* Currency exchange in case its needed */
                     $total_amount_default_currency = $payment->total_amount;

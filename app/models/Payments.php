@@ -143,21 +143,15 @@ class Payments extends Model {
         /* Clear the cache */
         cache()->deleteItemsByTag('user_id=' . $user_id);
 
-        /* Send notification to the user */
-        $email_template = get_email_template(
-            [],
-            l('global.emails.user_payment.subject'),
-            [
-                '{{NAME}}' => $user->name,
-                '{{PLAN_NAME}}' => $plan->name,
-                '{{PLAN_EXPIRATION_DATE}}' => \Altum\Date::get($plan_expiration_date, 2),
-                '{{USER_PLAN_LINK}}' => url('account-plan'),
-                '{{USER_PAYMENTS_LINK}}' => url('account-payments'),
-            ],
-            l('global.emails.user_payment.body')
-        );
-
-        send_mail($user->email, $email_template->subject, $email_template->body, ['anti_phishing_code' => $user->anti_phishing_code, 'language' => $user->language]);
+        /* Send rich confirmation notification to the user */
+        self::send_user_payment_confirmation_email($user, $plan, [
+            'total_amount' => $payment_total,
+            'currency' => $payment_currency,
+            'frequency' => $payment_frequency,
+            'processor' => $payment_processor,
+            'payment_code' => !empty($code) && is_object($code) ? $code->code : $external_payment_id,
+            'expiration_date' => $plan_expiration_date,
+        ]);
 
         /* Send notification to admin if needed */
         if(settings()->email_notifications->new_payment && !empty(settings()->email_notifications->emails)) {
@@ -270,6 +264,180 @@ class Payments extends Model {
                 }
             }
         }
+    }
+
+
+    public static function send_user_payment_confirmation_email($user, $plan, $data = []) {
+        /* If user is user_id, retrieve user object */
+        if(is_numeric($user)) {
+            $user = db()->where('user_id', (int) $user)->getOne('users');
+        }
+        if(!$user || empty($user->email)) {
+            return false;
+        }
+
+        /* If plan is plan_id or string, retrieve plan object */
+        if(is_string($plan) || is_numeric($plan)) {
+            $plan = (new \Altum\Models\Plan())->get_plan_by_id($plan);
+        }
+        $plan_name = $plan->name ?? ($data['plan_name'] ?? 'Custom');
+
+        /* Determine user greeting */
+        $user_name = !empty($user->name) ? $user->name : explode('@', $user->email)[0];
+        $website_title = settings()->main->title ?: 'SeamlessQRCode';
+        $currency = $data['currency'] ?? ($data['payment_currency'] ?? settings()->payment->default_currency);
+        $total_amount = isset($data['total_amount']) ? $data['total_amount'] : ($data['payment_total_amount'] ?? ($data['payment_total'] ?? ($data['amount'] ?? 0)));
+        $frequency = $data['frequency'] ?? ($data['payment_frequency'] ?? 'monthly');
+        $frequency_label = l('plan.custom_plan.' . $frequency) ?: ucfirst($frequency);
+
+        /* Format amount with currency symbol or code */
+        $currency_upper = strtoupper((string) $currency);
+        if($currency_upper == 'USD') {
+            $formatted_amount = '$' . nr($total_amount, 2);
+        } else if($currency_upper == 'EUR') {
+            $formatted_amount = '€' . nr($total_amount, 2);
+        } else if($currency_upper == 'GBP') {
+            $formatted_amount = '£' . nr($total_amount, 2);
+        } else if($currency_upper == 'KES') {
+            $formatted_amount = 'KES ' . nr($total_amount, 2);
+        } else {
+            $formatted_amount = nr($total_amount, 2) . ' ' . $currency_upper;
+        }
+
+        /* Transaction / reference code */
+        $payment_code = $data['payment_code'] ?? ($data['code'] ?? ($data['external_payment_id'] ?? ($data['payment_id'] ?? '')));
+        if(empty($payment_code)) {
+            $payment_code = strtoupper(substr(md5(uniqid((string) rand(), true)), 0, 10));
+        }
+
+        $processor = $data['processor'] ?? ($data['payment_processor'] ?? 'offline_payment');
+
+        /* Payment method display */
+        if($processor == 'offline_payment') {
+            if(!empty($data['code']) && preg_match('/^[A-Z0-9]{8,12}$/i', (string) $data['code'])) {
+                $payment_method = 'M-PESA (Ref: ' . $data['code'] . ')';
+            } else if(!empty($data['confirmation_message']) && stripos((string) $data['confirmation_message'], 'MPESA') !== false) {
+                $payment_method = 'M-PESA PAYBILL 522522';
+            } else {
+                $payment_method = 'M-PESA PAYBILL 522522' . (!empty($payment_code) && $payment_code !== 'offline_payment' ? ' (Ref: ' . $payment_code . ')' : '');
+            }
+        } else if(in_array($processor, ['stripe', 'paypal', 'paystack', 'razorpay', 'iyzico', 'payu', 'crypto', 'coinbase'])) {
+            $payment_method = ucfirst($processor) . ' (' . ($payment_code ? 'Ref: ' . $payment_code : 'Online') . ')';
+        } else {
+            $payment_method = ucfirst(str_replace('_', ' ', (string) $processor));
+            if(!empty($payment_code)) {
+                $payment_method .= ' (Ref: ' . $payment_code . ')';
+            }
+        }
+
+        /* Expiration / Renewal date */
+        $expiration_date = $data['expiration_date'] ?? ($data['plan_expiration_date'] ?? ($data['period_end'] ?? null));
+        if($frequency == 'lifetime') {
+            $renewal_date_display = 'Never (Lifetime Access)';
+            $estimated_next_charge = 'None (Lifetime Access)';
+        } else {
+            if(!empty($expiration_date)) {
+                try {
+                    $dt = new \DateTime($expiration_date);
+                    $renewal_date_display = $dt->format('d-M-Y H:i');
+                } catch(\Throwable $e) {
+                    $renewal_date_display = \Altum\Date::get($expiration_date, 2);
+                }
+            } else {
+                $renewal_date_display = 'Active';
+            }
+            $estimated_next_charge = $formatted_amount;
+        }
+
+        $support_email = !empty(settings()->smtp->from) ? settings()->smtp->from : 'support@seamlessqrcode.com';
+        $support_url = url('contact');
+        $portal_url = url('account-payments');
+
+        /* Subject matching the MaxCut structure */
+        $subject = sprintf('Congratulations on your %s Subscription for #%s', $website_title, $payment_code);
+
+        /* Rich HTML Body borrowing tone and structure from MaxCut */
+        $body = '
+        <div style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; color: #2d3748; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1a202c; margin-top: 0; margin-bottom: 18px; font-size: 22px; font-weight: 700;">Your subscription is active</h2>
+            
+            <p style="margin-bottom: 16px; font-size: 16px;">
+                Hi ' . htmlspecialchars($user_name) . ',
+            </p>
+            
+            <p style="margin-bottom: 16px; font-size: 16px;">
+                Congratulations on your new paid <strong>' . htmlspecialchars($website_title) . '</strong> subscription. Your account is now active and ready. As soon as you log in you can get started creating dynamic QR codes, customizing short links, and utilizing all premium features.
+            </p>
+            
+            <p style="margin-bottom: 24px; font-size: 15px; color: #4a5568;">
+                If at any point you need assistance visit our <a href="' . $support_url . '" style="color: #007bff; text-decoration: underline;">support centre</a> or email us at <a href="mailto:' . $support_email . '" style="color: #007bff; text-decoration: underline;">' . $support_email . '</a>.
+            </p>
+
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                    <tbody>
+                        <tr style="border-bottom: 2px solid #e2e8f0;">
+                            <td colspan="2" style="padding: 0 0 10px 0; color: #718096; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">
+                                Subscription summary
+                            </td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #edf2f7;">
+                            <td style="padding: 12px 0; font-weight: 600; color: #2d3748;">
+                                ' . htmlspecialchars($website_title . ' ' . $plan_name . ' ' . $frequency_label . ' Subscription') . '
+                            </td>
+                            <td style="padding: 12px 0; text-align: right; font-weight: 600; color: #2d3748;">
+                                ' . $formatted_amount . ' &times; 1 units
+                            </td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #edf2f7;">
+                            <td style="padding: 12px 0; color: #718096;">Invoiced amount</td>
+                            <td style="padding: 12px 0; text-align: right; font-weight: 700; color: #1a202c;">' . $formatted_amount . '</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #edf2f7;">
+                            <td style="padding: 12px 0; color: #718096;">Payment method</td>
+                            <td style="padding: 12px 0; text-align: right; color: #2d3748;">' . htmlspecialchars($payment_method) . '</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #edf2f7;">
+                            <td style="padding: 12px 0; color: #718096;">Next renewal on</td>
+                            <td style="padding: 12px 0; text-align: right; color: #2d3748;">' . htmlspecialchars($renewal_date_display) . '</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 0 0 0; color: #718096;">Estimated charge on next renewal</td>
+                            <td style="padding: 12px 0 0 0; text-align: right; color: #2d3748;">' . htmlspecialchars($estimated_next_charge) . '</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p style="margin-bottom: 16px; font-size: 15px; color: #4a5568;">
+                View payments, update them or manage your account on your customer portal.
+            </p>
+
+            <div style="margin: 20px 0 28px 0;">
+                <a href="' . $portal_url . '" class="cta" style="background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">
+                    Log into your account now &rarr;
+                </a>
+            </div>
+
+            <p style="margin-bottom: 24px; font-size: 15px; color: #2d3748;">
+                Regards,<br />
+                <strong>' . htmlspecialchars($website_title) . ' Support</strong>
+            </p>
+
+            <p style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #718096; font-style: italic;">
+                PS: We hope you\'re enjoying your experience with us! As always, feel free to reach out to us. We\'d love to hear from you.
+            </p>
+        </div>';
+
+        return send_mail(
+            $user->email,
+            $subject,
+            $body,
+            [
+                'anti_phishing_code' => $user->anti_phishing_code ?? null,
+                'language' => $user->language ?? settings()->main->default_language
+            ]
+        );
     }
 
 }

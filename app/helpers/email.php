@@ -364,3 +364,7 @@ function send_resource_transfer_notifications($resource_type, $resource_name, $s
         ]);
     }
 }
+
+function send_payment_confirmation_email($user, $plan, $data = []) {
+    return \Altum\Models\Payments::send_user_payment_confirmation_email($user, $plan, $data);
+}
