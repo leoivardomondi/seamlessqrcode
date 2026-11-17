@@ -1656,6 +1656,7 @@ class Subscription extends Model {
             'status' => 1,
             'plan_trial_done' => 1,
             'plan_expiration_date' => $period_end,
+            'plan_expiry_reminder' => ($frequency == 'monthly' ? 1 : 0),
         ]);
         cache()->deleteItemsByTag('user_id=' . $subscription->user_id);
 
@@ -2302,7 +2303,7 @@ class Subscription extends Model {
             'plan_id' => $subscription->plan_id,
             'plan_settings' => json_encode($plan->settings),
             'plan_expiration_date' => $subscription->current_period_end,
-            'plan_expiry_reminder' => 0,
+            'plan_expiry_reminder' => ($frequency == 'monthly' ? 1 : 0),
             'payment_subscription_id' => $subscription->external_subscription_id,
             'payment_processor' => $subscription->processor,
             'payment_total_amount' => $subscription->total_amount,

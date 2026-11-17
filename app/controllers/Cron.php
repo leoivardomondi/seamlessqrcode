@@ -530,6 +530,13 @@ class Cron extends Controller {
         /* Go through each result */
         while($user = $result->fetch_object()) {
 
+            /* If a user pays monthly, do not send reminder in the 30 days - renewal info was provided in the confirmation email */
+            $latest_payment = db()->where('user_id', $user->user_id)->orderBy('id', 'DESC')->getOne('payments', ['frequency']);
+            if($latest_payment && $latest_payment->frequency == 'monthly') {
+                db()->where('user_id', $user->user_id)->update('users', ['plan_expiry_reminder' => 1]);
+                continue;
+            }
+
             /* Determine the exact days until expiration */
             $days_until_expiration = (new \DateTime($user->plan_expiration_date))->diff((new \DateTime()))->days;
 
