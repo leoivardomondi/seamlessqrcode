@@ -129,7 +129,7 @@ class Payments extends Model {
             'plan_id' => $plan_id,
             'plan_settings' => $plan->settings,
             'plan_expiration_date' => $plan_expiration_date,
-            'plan_expiry_reminder' => ($payment_frequency == 'monthly' ? 1 : 0),
+            'plan_expiry_reminder' => 0,
             'plan_trial_done' => 1,
             'payment_subscription_id' => $payment_subscription_id,
             'payment_processor' => $payment_processor,

@@ -155,7 +155,7 @@ class AdminPayments extends Controller {
                 'plan_id' => $payment->plan_id,
                 'plan_settings' => json_encode($plan->settings),
                 'plan_expiration_date' => $plan_expiration_date,
-                'plan_expiry_reminder' => (($payment->frequency ?? '') == 'monthly' ? 1 : 0),
+                'plan_expiry_reminder' => 0,
                 'payment_processor' => 'offline_payment',
                 'payment_total_amount' => $payment->total_amount,
                 'payment_currency' => $payment->currency,

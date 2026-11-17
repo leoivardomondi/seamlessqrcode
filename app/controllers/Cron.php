@@ -493,15 +493,17 @@ class Cron extends Controller {
     }
 
     private function users_plan_expiry_reminder() {
-        if(!settings()->payment->user_plan_expiry_reminder) {
+        $setting_days = (int) (settings()->payment->user_plan_expiry_reminder ?? 0);
+
+        /* Window is at least 7 days so monthly users get their 7-day remaining reminder */
+        $reminder_window_days = max(7, $setting_days);
+        if($reminder_window_days <= 0) {
             return;
         }
 
-        /* Determine when to send the email reminder */
-        $days = settings()->payment->user_plan_expiry_reminder;
-        $future_date = (new \DateTime())->modify('+' . $days . ' days')->format('Y-m-d H:i:s');
+        $future_date = (new \DateTime())->modify('+' . $reminder_window_days . ' days')->format('Y-m-d H:i:s');
 
-        /* Get potential monitors from users that have almost all the conditions to get an email report right now */
+        /* Get potential users that have almost all the conditions to get an email report right now */
         $result = database()->query("
             SELECT
                 `user_id`,
@@ -530,38 +532,101 @@ class Cron extends Controller {
         /* Go through each result */
         while($user = $result->fetch_object()) {
 
-            /* If a user pays monthly, do not send reminder in the 30 days - renewal info was provided in the confirmation email */
+            /* Determine exact days until expiration */
+            $diff = (new \DateTime())->diff(new \DateTime($user->plan_expiration_date));
+            $days_until_expiration = $diff->invert ? 0 : (int) $diff->days;
+
+            /* Check payment frequency */
             $latest_payment = db()->where('user_id', $user->user_id)->orderBy('id', 'DESC')->getOne('payments', ['frequency']);
-            if($latest_payment && $latest_payment->frequency == 'monthly') {
-                db()->where('user_id', $user->user_id)->update('users', ['plan_expiry_reminder' => 1]);
+            $is_monthly = ($latest_payment && $latest_payment->frequency == 'monthly');
+
+            /* For monthly paying users: do NOT send reminder in the first 23 days; only send when 7 days (or fewer) remain */
+            if($is_monthly && $days_until_expiration > 7) {
                 continue;
             }
 
-            /* Determine the exact days until expiration */
-            $days_until_expiration = (new \DateTime($user->plan_expiration_date))->diff((new \DateTime()))->days;
+            /* For other frequencies: honor configured settings threshold */
+            if(!$is_monthly && $setting_days > 0 && $days_until_expiration > $setting_days) {
+                continue;
+            }
 
-            /* Prepare the email */
-            $email_template = get_email_template(
-                [
-                    '{{DAYS_UNTIL_EXPIRATION}}' => $days_until_expiration,
-                ],
-                l('global.emails.user_plan_expiry_reminder.subject', $user->language),
-                [
-                    '{{DAYS_UNTIL_EXPIRATION}}' => $days_until_expiration,
-                    '{{USER_PLAN_RENEW_LINK}}' => url('pay/' . $user->plan_id),
-                    '{{NAME}}' => $user->name,
-                    '{{PLAN_NAME}}' => $plans[$user->plan_id]->name,
-                ],
-                l('global.emails.user_plan_expiry_reminder.body', $user->language)
-            );
+            $website_title = settings()->main->title ?: 'SeamlessQRCode';
+            $support_email = !empty(settings()->smtp->from) ? settings()->smtp->from : 'support@seamlessqrcode.com';
+            $support_url = url('contact');
+            $renew_url = url('pay/' . $user->plan_id);
+            $plan_name = $plans[$user->plan_id]->name ?? 'Subscription';
+            $user_name = !empty($user->name) ? $user->name : explode('@', $user->email)[0];
+            $expiration_date_display = \Altum\Date::get($user->plan_expiration_date, 2);
 
-            send_mail($user->email, $email_template->subject, $email_template->body, ['anti_phishing_code' => $user->anti_phishing_code, 'language' => $user->language]);
+            $subject = sprintf('Your %s (%s) plan is expiring in %d days - %s', $website_title, $plan_name, $days_until_expiration, $website_title);
+
+            $body = '
+            <div style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; color: #2d3748; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1a202c; margin-top: 0; margin-bottom: 18px; font-size: 22px; font-weight: 700;">Plan Renewal Reminder</h2>
+                
+                <p style="margin-bottom: 16px; font-size: 16px;">
+                    Hi ' . htmlspecialchars($user_name) . ',
+                </p>
+                
+                <p style="margin-bottom: 16px; font-size: 16px;">
+                    This is a friendly reminder that your <strong>' . htmlspecialchars($website_title) . ' (' . htmlspecialchars($plan_name) . ')</strong> subscription will expire in <strong>' . (int) $days_until_expiration . ' days</strong> (on ' . htmlspecialchars($expiration_date_display) . ').
+                </p>
+                
+                <p style="margin-bottom: 24px; font-size: 15px; color: #4a5568;">
+                    To keep your dynamic QR codes, shortened links, and scan analytics active without interruption, please renew your subscription. If you need assistance, visit our <a href="' . $support_url . '" style="color: #007bff; text-decoration: underline;">support centre</a> or email us at <a href="mailto:' . $support_email . '" style="color: #007bff; text-decoration: underline;">' . $support_email . '</a>.
+                </p>
+
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                        <tbody>
+                            <tr style="border-bottom: 2px solid #e2e8f0;">
+                                <td colspan="2" style="padding: 0 0 10px 0; color: #718096; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">
+                                    Subscription details
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #edf2f7;">
+                                <td style="padding: 12px 0; font-weight: 600; color: #2d3748;">
+                                    ' . htmlspecialchars($website_title . ' ' . $plan_name . ' Subscription') . '
+                                </td>
+                                <td style="padding: 12px 0; text-align: right; color: #e53e3e; font-weight: 700;">
+                                    ' . (int) $days_until_expiration . ' days left
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 12px 0 0 0; color: #718096;">Expires on</td>
+                                <td style="padding: 12px 0 0 0; text-align: right; font-weight: 600; color: #2d3748;">' . htmlspecialchars($expiration_date_display) . '</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p style="margin-bottom: 16px; font-size: 15px; color: #4a5568;">
+                    Renew your subscription now to avoid any disruption to your services:
+                </p>
+
+                <div style="margin: 20px 0 28px 0;">
+                    <a href="' . $renew_url . '" class="cta" style="background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">
+                        Renew your subscription now &rarr;
+                    </a>
+                </div>
+
+                <p style="margin-bottom: 24px; font-size: 15px; color: #2d3748;">
+                    Regards,<br />
+                    <strong>' . htmlspecialchars($website_title) . ' Support</strong>
+                </p>
+
+                <p style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #718096; font-style: italic;">
+                    PS: We hope you\'re enjoying your experience with us! As always, feel free to reach out to us. We\'d love to hear from you.
+                </p>
+            </div>';
+
+            send_mail($user->email, $subject, $body, ['anti_phishing_code' => $user->anti_phishing_code, 'language' => $user->language]);
 
             /* Update user */
             db()->where('user_id', $user->user_id)->update('users', ['plan_expiry_reminder' => 1]);
 
             if(DEBUG) {
-                echo sprintf('users_plan_expiry_reminder() -> Email sent for user_id %s', $user->user_id);
+                echo sprintf('users_plan_expiry_reminder() -> Email sent for user_id %s (%d days left)', $user->user_id, $days_until_expiration);
             }
         }
 

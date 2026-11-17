@@ -317,7 +317,7 @@ class Pay extends Controller {
                         'plan_id' => $this->plan_id,
                         'plan_expiration_date' => $plan_expiration_date,
                         'plan_settings' => $plan_settings,
-                        'plan_expiry_reminder' => (($_POST['payment_frequency'] ?? '') == 'monthly' ? 1 : 0),
+                        'plan_expiry_reminder' => 0,
                     ]);
 
                     /* Update the code usage */
@@ -1186,7 +1186,7 @@ class Pay extends Controller {
                 'plan_id' => $this->plan_id,
                 'plan_settings' => json_encode($plan->settings),
                 'plan_expiration_date' => $plan_expiration_date,
-                'plan_expiry_reminder' => (($_POST['payment_frequency'] ?? '') == 'monthly' ? 1 : 0),
+                'plan_expiry_reminder' => 0,
                 'plan_trial_done' => 1,
                 'payment_processor' => 'offline_payment',
                 'payment_total_amount' => $formatted_price,
