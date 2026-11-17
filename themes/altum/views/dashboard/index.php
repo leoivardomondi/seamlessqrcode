@@ -15,7 +15,7 @@
                 <span>Your subscription has expired. Renew your plan to keep your dynamic QR codes active.</span>
             </div>
             <div>
-                <a href="<?= url('plan/renew') ?>" class="btn btn-sm btn-warning font-weight-bold text-dark ml-md-3"><i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now</a>
+                <a href="<?= url('pay/direct') ?>" class="btn btn-sm btn-warning font-weight-bold text-dark ml-md-3"><i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now</a>
             </div>
         </div>
     <?php elseif(!$dash_user_is_paid_active): ?>

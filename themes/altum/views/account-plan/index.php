@@ -29,7 +29,7 @@
                             <?php if($this->user->plan_id == 'free'): ?>
                                 <a href="<?= url('plan/upgrade') ?>" class="btn btn-block btn-outline-primary rounded-2x my-4"><i class="fas fa-fw fa-sm fa-arrow-up"></i> <?= l('account.plan.upgrade_plan') ?></a>
                             <?php else: ?>
-                                <a href="<?= url('plan/renew') ?>" class="btn btn-block btn-outline-primary rounded-2x my-4"><i class="fas fa-fw fa-sm fa-sync-alt"></i> <?= l('account.plan.renew_plan') ?></a>
+                                <a href="<?= url('pay/direct') ?>" class="btn btn-block btn-outline-primary rounded-2x my-4"><i class="fas fa-fw fa-sm fa-credit-card"></i> <?= l('account.plan.renew_plan') ?></a>
                             <?php endif ?>
                         <?php endif ?>
 

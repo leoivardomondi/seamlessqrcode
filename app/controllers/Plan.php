@@ -28,6 +28,11 @@ class Plan extends Controller {
             redirect('plan/new');
         }
 
+        /* 1-click renewal direct to Paystack */
+        if($type == 'renew' && is_logged_in() && $this->user->plan_id != 'free') {
+            redirect('pay/direct');
+        }
+
         
 
         /* Set a custom title */

@@ -291,7 +291,7 @@
                         ]) ?>
 
                         <?php if(settings()->users->register_is_enabled || is_logged_in()): ?>
-                            <a href="<?= \Altum\Router::$controller == 'Lifetime' ? url('lifetime-checkout/' . $plan->plan_id) : (is_logged_in() ? url('pay/' . $plan->plan_id) : url('register?redirect=pay/' . $plan->plan_id)) ?>" data-plan-link class="btn btn-block btn-primary rounded-2x <?= is_logged_in() && $this->user->plan_id == $plan->plan_id && (new \DateTime($this->user->plan_expiration_date)) > (new \DateTime())->modify('+10 years') ? 'disabled' : null ?>" style="background-color: <?= $plan_color ?>; border-color: <?= $plan_color ?>">
+                            <a href="<?= \Altum\Router::$controller == 'Lifetime' ? url('lifetime-checkout/' . $plan->plan_id) : (is_logged_in() ? url('pay/' . $plan->plan_id . '?direct=paystack') : url('register?redirect=pay/' . $plan->plan_id)) ?>" data-plan-link class="btn btn-block btn-primary rounded-2x <?= is_logged_in() && $this->user->plan_id == $plan->plan_id && (new \DateTime($this->user->plan_expiration_date)) > (new \DateTime())->modify('+10 years') ? 'disabled' : null ?>" style="background-color: <?= $plan_color ?>; border-color: <?= $plan_color ?>">
                                 <?php if(is_logged_in()): ?>
                                     <?php if($this->user->plan_id == $plan->plan_id && (new \DateTime($this->user->plan_expiration_date)) > (new \DateTime())->modify('+10 years')): ?>
                                         <?= l('plans.lifetime') ?>
@@ -352,7 +352,7 @@
                         $('a[data-plan-link]').each(function() {
                             let base_url = $(this).data('plan-base-url') || $(this).attr('href').split('?')[0];
                             $(this).data('plan-base-url', base_url);
-                            $(this).attr('href', base_url + '?payment_frequency=' + payment_frequency);
+                            $(this).attr('href', base_url + '?payment_frequency=' + payment_frequency + '<?= is_logged_in() ? '&direct=paystack' : '' ?>');
                         });
                     }
                 };

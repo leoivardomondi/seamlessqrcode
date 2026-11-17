@@ -66,7 +66,7 @@
                     <?php if(!$nav_user_is_paid): ?>
                         <li class="nav-item d-flex align-items-center my-2 my-lg-0 ml-lg-2">
                             <?php if($nav_user_plan_is_expired): ?>
-                                <a href="<?= url('plan/renew') ?>" class="btn btn-sm btn-warning font-weight-bold shadow-sm px-3 text-dark">
+                                <a href="<?= url('pay/direct') ?>" class="btn btn-sm btn-warning font-weight-bold shadow-sm px-3 text-dark">
                                     <i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now
                                 </a>
                             <?php else: ?>

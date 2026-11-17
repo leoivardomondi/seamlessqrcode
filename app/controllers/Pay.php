@@ -82,17 +82,45 @@ class Pay extends Controller {
 
         $payment_processors = require APP_PATH . 'includes/payment_processors.php';
 
+        $this->plan_id = isset($this->params[0]) ? $this->params[0] : null;
+        $is_direct = ($this->plan_id === 'direct' || $this->plan_id === 'renew' || isset($_GET['direct']));
+
+        /* If direct or renew without a numeric plan_id, resolve target plan from user subscription history or invoice */
+        if(in_array($this->plan_id, ['direct', 'renew', null, ''])) {
+            $resolved_plan_id = $this->resolve_user_plan_id($this->user, $invoice_id);
+            if($resolved_plan_id) {
+                $this->plan_id = $resolved_plan_id;
+            } else {
+                redirect('plan');
+            }
+        }
+
+        /* Currency resolution: prioritize explicit URL currency, else auto-detect country currency */
         if(isset($_GET['currency'])) {
             $_GET['currency'] = mb_strtoupper(query_clean($_GET['currency']));
 
             if(array_key_exists($_GET['currency'], (array) settings()->payment->currencies)) {
                 \Altum\Currency::$currency = $_GET['currency'];
             }
+        } else {
+            $country_currency = $this->resolve_country_currency($this->user);
+            if($country_currency && array_key_exists($country_currency, (array) settings()->payment->currencies)) {
+                \Altum\Currency::$currency = $country_currency;
+            }
         }
 
-        $this->plan_id = isset($this->params[0]) ? $this->params[0] : null;
+        /* Frequency resolution: prioritize explicit URL frequency, else resolve from user history / proforma */
+        $resolved_frequency = $this->resolve_user_frequency($this->user, $invoice_id);
+        if(!isset($_GET['payment_frequency'])) {
+            $_GET['payment_frequency'] = $resolved_frequency;
+        }
+
         $this->return_type = isset($_GET['return_type']) && in_array($_GET['return_type'], ['success', 'cancel']) ? $_GET['return_type'] : null;
         $this->payment_processor = isset($_GET['payment_processor']) && array_key_exists($_GET['payment_processor'], $payment_processors) ? $_GET['payment_processor'] : null;
+
+        if(!$this->payment_processor && isset(settings()->paystack) && settings()->paystack->is_enabled && in_array(currency(), settings()->paystack->currencies ?? [])) {
+            $this->payment_processor = 'paystack';
+        }
 
         /* ^_^ */
         switch($this->plan_id) {
@@ -170,6 +198,11 @@ class Pay extends Controller {
         /* Make sure the plan is enabled */
         if(!$this->plan->status) {
             redirect('plan');
+        }
+
+        /* Instant 1-Click Paystack Checkout */
+        if($is_direct && !$this->return_type && empty($_POST)) {
+            $this->initiate_direct_paystack_checkout($resolved_frequency, $invoice_id);
         }
 
         /* Allow users to pay directly without filling billing details first; they can update billing info later for invoice generation */
@@ -526,9 +559,9 @@ class Pay extends Controller {
     private function return_url_parameters($return_type, $base_amount, $total_amount, $code, $discount_amount) {
         $parameters =
             '&return_type=' . $return_type
-            . '&payment_processor=' . $_POST['payment_processor']
-            . '&payment_frequency=' . $_POST['payment_frequency']
-            . '&payment_type=' . $_POST['payment_type']
+            . '&payment_processor=' . ($_POST['payment_processor'] ?? $this->payment_processor ?? 'paystack')
+            . '&payment_frequency=' . ($_POST['payment_frequency'] ?? 'monthly')
+            . '&payment_type=' . ($_POST['payment_type'] ?? 'one_time')
             . '&code=' . $code
             . '&discount_amount=' . $discount_amount
             . '&base_amount=' . $base_amount
@@ -1562,7 +1595,7 @@ class Pay extends Controller {
                 $paystack_one_time_payload = [
                     'key' => settings()->paystack->public_key,
                     'email' => $this->user->email,
-                    'first_name' => $this->user->name,
+                    'first_name' => $this->user->name ?: explode('@', $this->user->email)[0],
                     'amount' => (int) round($formatted_price * 100),
                     'currency' => currency(),
                     'channels' => $paystack_channels,
@@ -3028,6 +3061,199 @@ class Pay extends Controller {
 
         header('Location: ' . $response->body->checkout_url);
         die();
+    }
+
+    public function resolve_country_currency($user = null) {
+        $user = $user ?: ($this->user ?? null);
+        $country_code = null;
+
+        /* 1. User billing country */
+        if($user && !empty($user->billing->country)) {
+            $country_code = mb_strtoupper(trim((string) $user->billing->country));
+        }
+
+        /* 2. User profile country */
+        if(!$country_code && $user && !empty($user->country)) {
+            $country_code = mb_strtoupper(trim((string) $user->country));
+        }
+
+        /* 3. Cloudflare IP country */
+        if(!$country_code && isset($_SERVER['HTTP_CF_IPCOUNTRY']) && $_SERVER['HTTP_CF_IPCOUNTRY'] != 'XX') {
+            $country_code = mb_strtoupper(trim((string) $_SERVER['HTTP_CF_IPCOUNTRY']));
+        }
+
+        /* 4. MaxMind GeoIP */
+        if(!$country_code && function_exists('get_ip') && function_exists('get_maxmind_reader_country')) {
+            $ip = get_ip();
+            if($ip) {
+                try {
+                    $maxmind = (get_maxmind_reader_country())->get($ip);
+                    $country_code = $maxmind['country']['iso_code'] ?? null;
+                } catch(\Throwable $e) {}
+            }
+        }
+
+        $detected_currency = null;
+        if($country_code) {
+            $country_code = mb_strtoupper($country_code);
+            if($country_code === 'KE' || $country_code === 'KENYA') {
+                $detected_currency = 'KES';
+            } elseif($country_code === 'NG' || $country_code === 'NIGERIA') {
+                $detected_currency = 'NGN';
+            } elseif($country_code === 'GH' || $country_code === 'GHANA') {
+                $detected_currency = 'GHS';
+            } elseif($country_code === 'ZA' || $country_code === 'SOUTH AFRICA') {
+                $detected_currency = 'ZAR';
+            } elseif($country_code === 'US' || $country_code === 'USA' || $country_code === 'UNITED STATES') {
+                $detected_currency = 'USD';
+            }
+        }
+
+        /* Check if detected currency exists in enabled system payment currencies */
+        if($detected_currency && isset(settings()->payment->currencies->{$detected_currency})) {
+            return $detected_currency;
+        }
+
+        return currency();
+    }
+
+    public function resolve_user_frequency($user = null, $invoice_id = null) {
+        $user = $user ?: ($this->user ?? null);
+
+        /* 1. Explicit request parameter */
+        if(isset($_GET['payment_frequency']) && in_array($_GET['payment_frequency'], ['monthly', 'quarterly', 'biannual', 'annual', 'lifetime'])) {
+            return $_GET['payment_frequency'];
+        }
+
+        /* 2. From specified invoice or pending invoice */
+        if($invoice_id && $user) {
+            $invoice = db()->where('invoice_id', (int) $invoice_id)->where('user_id', $user->user_id)->getOne('invoices');
+            if($invoice && !empty($invoice->frequency)) {
+                return $invoice->frequency;
+            }
+        }
+
+        if($user && !empty($user->user_id)) {
+            /* 3. Check latest unpaid/open invoice */
+            $open_invoice = db()->where('user_id', $user->user_id)->where('status', 'paid', '!=')->orderBy('invoice_id', 'DESC')->getOne('invoices');
+            if($open_invoice && !empty($open_invoice->frequency)) {
+                return $open_invoice->frequency;
+            }
+
+            /* 4. Check active/latest subscription */
+            $subscription = db()->where('user_id', $user->user_id)->orderBy('subscription_id', 'DESC')->getOne('subscriptions');
+            if($subscription && !empty($subscription->frequency)) {
+                return $subscription->frequency;
+            }
+
+            /* 5. Check last approved payment */
+            $last_payment = db()->where('user_id', $user->user_id)->where('status', 1)->orderBy('payment_id', 'DESC')->getOne('payments');
+            if($last_payment && !empty($last_payment->frequency)) {
+                return $last_payment->frequency;
+            }
+        }
+
+        /* 6. Default to monthly */
+        return settings()->payment->default_payment_frequency ?? 'monthly';
+    }
+
+    public function resolve_user_plan_id($user = null, $invoice_id = null) {
+        $user = $user ?: ($this->user ?? null);
+
+        if(isset($_GET['plan_id'])) {
+            return (int) $_GET['plan_id'];
+        }
+
+        if($invoice_id && $user) {
+            $invoice = db()->where('invoice_id', (int) $invoice_id)->where('user_id', $user->user_id)->getOne('invoices');
+            if($invoice && !empty($invoice->plan_id) && $invoice->plan_id !== 'free') {
+                return (int) $invoice->plan_id;
+            }
+        }
+
+        if($user && $user->plan_id != 'free') {
+            return (int) $user->plan_id;
+        }
+
+        if($user && !empty($user->user_id)) {
+            $last_sub_plan = db()->where('user_id', $user->user_id)->orderBy('subscription_id', 'DESC')->getValue('subscriptions', 'plan_id');
+            if($last_sub_plan && $last_sub_plan !== 'free') {
+                return (int) $last_sub_plan;
+            }
+
+            $last_pay_plan = db()->where('user_id', $user->user_id)->where('status', 1)->orderBy('payment_id', 'DESC')->getValue('payments', 'plan_id');
+            if($last_pay_plan && $last_pay_plan !== 'free') {
+                return (int) $last_pay_plan;
+            }
+        }
+
+        return null;
+    }
+
+    public function initiate_direct_paystack_checkout($frequency, $invoice_id = null) {
+        if(!isset(settings()->paystack) || !settings()->paystack->is_enabled) {
+            return;
+        }
+
+        /* Check for code usage in GET */
+        if(settings()->payment->codes_is_enabled && isset($_GET['code'])) {
+            $_POST['code'] = query_clean($_GET['code']);
+            $this->code = database()->query("SELECT * FROM `codes` WHERE `code` = '{$_POST['code']}' AND `redeemed` < `quantity`")->fetch_object();
+            if($this->code) {
+                $start_datetime = $this->code->start_datetime ?? null;
+                $end_datetime = $this->code->end_datetime ?? null;
+                if(($start_datetime && $start_datetime > date('Y-m-d H:i:s')) || ($end_datetime && $end_datetime < date('Y-m-d H:i:s'))) {
+                    $this->code = null;
+                }
+                if($this->code) {
+                    $this->code->plans_ids = json_decode($this->code->plans_ids ?? '[]');
+                    if(!is_array($this->code->plans_ids) || !in_array($this->plan_id, $this->code->plans_ids)) {
+                        $this->code = null;
+                    }
+                }
+            }
+        }
+
+        /* Check that plan price is valid for frequency in current currency */
+        $price = (float) ($this->plan->prices->{$frequency}->{currency()} ?? 0);
+        if($price <= 0) {
+            $default_currency = settings()->payment->default_currency ?? 'USD';
+            if((float) ($this->plan->prices->{$frequency}->{$default_currency} ?? 0) > 0) {
+                \Altum\Currency::$currency = $default_currency;
+            } else {
+                return;
+            }
+        }
+
+        /* Link any pending unpaid invoice */
+        $target_invoice_id = $invoice_id;
+        if(!$target_invoice_id) {
+            $pending_invoice = db()
+                ->where('user_id', $this->user->user_id)
+                ->where('status', 'paid', '!=')
+                ->orderBy('invoice_id', 'DESC')
+                ->getOne('invoices');
+            if($pending_invoice) {
+                $target_invoice_id = (int) $pending_invoice->invoice_id;
+            }
+        }
+
+        $_POST['payment_frequency'] = $frequency;
+        $_POST['payment_type'] = 'one_time';
+        $_POST['payment_processor'] = 'paystack';
+        $this->payment_processor = 'paystack';
+
+        if($target_invoice_id) {
+            $_REQUEST['invoice_id'] = $target_invoice_id;
+            $_GET['invoice_id'] = $target_invoice_id;
+        }
+
+        try {
+            $this->paystack();
+        } catch(\Throwable $exception) {
+            if(DEBUG) error_log('Paystack direct error: ' . $exception->getMessage());
+            Alerts::add_error(l('pay.error_message.failed_payment'));
+        }
     }
 
 }

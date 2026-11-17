@@ -8,7 +8,7 @@ $selected_payment_processor = $this->payment_processor
     && settings()->{$this->payment_processor}->is_enabled
     && in_array(currency(), settings()->{$this->payment_processor}->currencies ?? [])
         ? $this->payment_processor
-        : ($selected_currency->default_payment_processor ?? null);
+        : (isset(settings()->paystack) && settings()->paystack->is_enabled && in_array(currency(), settings()->paystack->currencies ?? []) ? 'paystack' : ($selected_currency->default_payment_processor ?? null));
 $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment_type'], ['one_time', 'recurring'])
     ? $_GET['payment_type']
     : (settings()->payment->default_payment_type ?? 'one_time');
@@ -227,7 +227,7 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
 
                             /* choose checked radio: prefer configured if available, else first available in order */
                             $default_checked_frequency = null;
-                            $wanted = isset($_GET['payment_frequency']) && in_array($_GET['payment_frequency'], ['monthly', 'quarterly', 'biannual', 'annual', 'lifetime']) ? $_GET['payment_frequency'] : (settings()->payment->default_payment_frequency ?? 'monthly');
+                            $wanted = isset($_GET['payment_frequency']) && in_array($_GET['payment_frequency'], ['monthly', 'quarterly', 'biannual', 'annual', 'lifetime']) ? $_GET['payment_frequency'] : (new \Altum\Controllers\Pay())->resolve_user_frequency($this->user, $data->invoice_data['invoice_id'] ?? null);
                             if($wanted === 'monthly' && $monthly_price > 0) { $default_checked_frequency = 'monthly'; }
                             elseif($wanted === 'quarterly' && $quarterly_price > 0) { $default_checked_frequency = 'quarterly'; }
                             elseif($wanted === 'biannual' && $biannual_price > 0) { $default_checked_frequency = 'biannual'; }

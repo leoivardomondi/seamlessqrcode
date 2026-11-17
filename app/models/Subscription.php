@@ -1476,6 +1476,9 @@ class Subscription extends Model {
 
         if($processor) {
             $query['payment_processor'] = $processor;
+            if($processor === 'paystack') {
+                $query['direct'] = 'paystack';
+            }
         }
 
         return [
