@@ -304,6 +304,8 @@ class AdminSettings extends Controller {
                 'user_plan_expiry_reminder' => (int) $_POST['user_plan_expiry_reminder'],
                 'user_plan_expiry_checker_is_enabled' => isset($_POST['user_plan_expiry_checker_is_enabled']),
                 'currency_exchange_api_key' => $_POST['currency_exchange_api_key'],
+                'proforma_monthly_notice_days' => input_clean($_POST['proforma_monthly_notice_days'] ?? '7'),
+                'proforma_annual_notice_days' => input_clean($_POST['proforma_annual_notice_days'] ?? '45'),
             ]);
 
             $this->update_settings('payment', $value);

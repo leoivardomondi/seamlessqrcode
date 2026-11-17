@@ -117,6 +117,28 @@
         </div>
 
         <div class="form-group">
+            <label for="proforma_monthly_notice_days"><i class="fas fa-fw fa-sm fa-file-invoice text-muted mr-1"></i> <?= l('admin_settings.payment.proforma_monthly_notice_days') ?></label>
+            <div class="input-group">
+                <input id="proforma_monthly_notice_days" type="text" name="proforma_monthly_notice_days" class="form-control" value="<?= settings()->payment->proforma_monthly_notice_days ?? '7' ?>" placeholder="7" />
+                <div class="input-group-append">
+                    <span class="input-group-text"><?= l('global.date.days') ?></span>
+                </div>
+            </div>
+            <small class="form-text text-muted"><?= l('admin_settings.payment.proforma_monthly_notice_days_help') ?></small>
+        </div>
+
+        <div class="form-group">
+            <label for="proforma_annual_notice_days"><i class="fas fa-fw fa-sm fa-file-invoice-dollar text-muted mr-1"></i> <?= l('admin_settings.payment.proforma_annual_notice_days') ?></label>
+            <div class="input-group">
+                <input id="proforma_annual_notice_days" type="text" name="proforma_annual_notice_days" class="form-control" value="<?= settings()->payment->proforma_annual_notice_days ?? '45' ?>" placeholder="45" />
+                <div class="input-group-append">
+                    <span class="input-group-text"><?= l('global.date.days') ?></span>
+                </div>
+            </div>
+            <small class="form-text text-muted"><?= l('admin_settings.payment.proforma_annual_notice_days_help') ?></small>
+        </div>
+
+        <div class="form-group">
             <label for="currency_exchange_api_key"><i class="fas fa-fw fa-sm fa-terminal text-muted mr-1"></i> <?= l('admin_settings.payment.currency_exchange_api_key') ?></label>
             <input id="currency_exchange_api_key" type="text" name="currency_exchange_api_key" class="form-control" value="<?= settings()->payment->currency_exchange_api_key ?>" />
             <small class="form-text text-muted"><?= l('admin_settings.payment.currency_exchange_api_key_help') ?></small>

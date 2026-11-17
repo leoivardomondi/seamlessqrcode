@@ -921,7 +921,24 @@ class Subscription extends Model {
 
         $now = get_date();
         $limit = (int) $limit;
-        $future_limit = (new \DateTime($now))->modify('+30 days')->format('Y-m-d H:i:s');
+
+        /* Parse configured notice days (Monthly defaults to 7 days, Annual defaults to 45 days) */
+        $parse_notice_days = function($setting_val, $default_days) {
+            if($setting_val !== null && $setting_val !== '') {
+                $days = array_filter(array_map('intval', explode(',', (string) $setting_val)), function($d) { return $d > 0; });
+                if(!empty($days)) {
+                    return array_values($days);
+                }
+            }
+            return (array) $default_days;
+        };
+
+        $annual_notice_days = $parse_notice_days(settings()->payment->proforma_annual_notice_days ?? null, [45, 1]);
+        $monthly_notice_days = $parse_notice_days(settings()->payment->proforma_monthly_notice_days ?? null, [7, 1]);
+
+        $max_notice_days = max(array_merge($annual_notice_days, $monthly_notice_days, [45, 7]));
+        $future_limit_days = $max_notice_days + 15;
+        $future_limit = (new \DateTime($now))->modify('+' . $future_limit_days . ' days')->format('Y-m-d H:i:s');
         $created = 0;
         $plans = [];
 
@@ -960,7 +977,7 @@ class Subscription extends Model {
             }
 
             $days_until_due = (int) $today->diff($due_day)->format('%r%a');
-            $notice_days = $subscription->frequency == 'annual' ? [30, 1] : [9, 1];
+            $notice_days = $subscription->frequency == 'annual' ? $annual_notice_days : $monthly_notice_days;
 
             if(!in_array($days_until_due, $notice_days, true)) {
                 continue;
@@ -980,7 +997,7 @@ class Subscription extends Model {
             $period_end = $this->calculate_period_end($period_start, $subscription->frequency);
             $proforma_key = 'proforma_' . md5($subscription->subscription_id . '|' . $period_start . '|' . $days_until_due);
 
-            if(db()->where('external_payment_id', $proforma_key)->has('invoices')) {
+            if(db()->where('external_payment_id', $proforma_key)->has('invoices') || db()->where('idempotency_key', $proforma_key)->has('billing_events')) {
                 continue;
             }
 
@@ -1015,53 +1032,86 @@ class Subscription extends Model {
                 'period_end' => $period_end,
             ];
 
-            $business = json_decode(json_encode(settings()->business));
-            $this->normalize_invoice_prefix($business);
+            /* Check if a proforma invoice already exists for this upcoming period */
+            $existing_invoice = db()
+                ->where('subscription_id', (int) $subscription->subscription_id)
+                ->where('type', 'proforma')
+                ->where('due_datetime', $period_start)
+                ->orderBy('invoice_id', 'DESC')
+                ->getOne('invoices');
 
-            $invoice_id = db()->insert('invoices', [
-                'subscription_id' => (int) $subscription->subscription_id,
-                'payment_id' => null,
-                'user_id' => (int) $subscription->user_id,
-                'plan_id' => (string) $subscription->plan_id,
-                'status' => 'draft',
-                'processor' => 'proforma',
-                'external_payment_id' => $proforma_key,
-                'type' => 'proforma',
-                'frequency' => $subscription->frequency,
-                'code' => $subscription->code,
-                'taxes_ids' => $subscription->taxes_ids ?: ($plan->taxes_ids ?? null),
-                'subtotal_amount' => $amount,
-                'discount_amount' => 0,
-                'tax_amount' => 0,
-                'total_amount' => $amount,
-                'total_amount_default_currency' => $total_amount_default_currency,
-                'currency' => $currency,
-                'due_datetime' => $period_start,
-                'paid_datetime' => null,
-                'billing' => settings()->payment->taxes_and_billing_is_enabled && $subscription->user_billing ? $subscription->user_billing : null,
-                'business' => json_encode($business),
-                'metadata' => json_encode($metadata),
-                'datetime' => $now,
-            ]);
+            if($existing_invoice) {
+                if($existing_invoice->status == 'paid') {
+                    continue;
+                }
+                $invoice_id = (int) $existing_invoice->invoice_id;
+                $amount = $this->decimal($existing_invoice->total_amount);
+                $currency = $existing_invoice->currency;
+            } else {
+                $business = json_decode(json_encode(settings()->business));
+                $this->normalize_invoice_prefix($business);
 
-            db()->insert('invoice_items', [
-                'invoice_id' => $invoice_id,
-                'item_type' => 'plan',
-                'description' => $plan->name ?? $subscription->plan_id,
-                'quantity' => 1,
-                'unit_amount' => $amount,
-                'total_amount' => $amount,
-                'currency' => $currency,
-                'metadata' => json_encode($metadata),
-                'datetime' => $now,
-            ]);
+                $invoice_id = db()->insert('invoices', [
+                    'subscription_id' => (int) $subscription->subscription_id,
+                    'payment_id' => null,
+                    'user_id' => (int) $subscription->user_id,
+                    'plan_id' => (string) $subscription->plan_id,
+                    'status' => 'draft',
+                    'processor' => 'proforma',
+                    'external_payment_id' => $proforma_key,
+                    'type' => 'proforma',
+                    'frequency' => $subscription->frequency,
+                    'code' => $subscription->code,
+                    'taxes_ids' => $subscription->taxes_ids ?: ($plan->taxes_ids ?? null),
+                    'subtotal_amount' => $amount,
+                    'discount_amount' => 0,
+                    'tax_amount' => 0,
+                    'total_amount' => $amount,
+                    'total_amount_default_currency' => $total_amount_default_currency,
+                    'currency' => $currency,
+                    'due_datetime' => $period_start,
+                    'paid_datetime' => null,
+                    'billing' => settings()->payment->taxes_and_billing_is_enabled && $subscription->user_billing ? $subscription->user_billing : null,
+                    'business' => json_encode($business),
+                    'metadata' => json_encode($metadata),
+                    'datetime' => $now,
+                ]);
 
-            $this->log_event('subscription.proforma_invoice_created', [
+                db()->insert('invoice_items', [
+                    'invoice_id' => $invoice_id,
+                    'item_type' => 'plan',
+                    'description' => $plan->name ?? $subscription->plan_id,
+                    'quantity' => 1,
+                    'unit_amount' => $amount,
+                    'total_amount' => $amount,
+                    'currency' => $currency,
+                    'metadata' => json_encode($metadata),
+                    'datetime' => $now,
+                ]);
+
+                $this->log_event('subscription.proforma_invoice_created', [
+                    'subscription_id' => $subscription->subscription_id,
+                    'invoice_id' => $invoice_id,
+                    'user_id' => $subscription->user_id,
+                    'source' => 'cron',
+                    'idempotency_key' => $proforma_key,
+                    'payload' => $metadata,
+                ]);
+
+                $created++;
+            }
+
+            /* Log notice event to ensure deduplication */
+            $this->log_event('subscription.proforma_invoice_notice_sent', [
                 'subscription_id' => $subscription->subscription_id,
                 'invoice_id' => $invoice_id,
                 'user_id' => $subscription->user_id,
                 'source' => 'cron',
-                'payload' => $metadata,
+                'idempotency_key' => $proforma_key,
+                'payload' => [
+                    'days_until_due' => $days_until_due,
+                    'frequency' => $subscription->frequency,
+                ],
             ]);
 
             $this->send_proforma_invoice_email($subscription, $invoice_id, $plan, $amount, $currency, $period_start, $period_end, $now);
@@ -1116,11 +1166,100 @@ class Subscription extends Model {
             $subject_template
         );
 
+        /* Prepare email options */
+        $options = [
+            'anti_phishing_code' => $subscription->user_anti_phishing_code ?? null,
+            'language' => $language,
+        ];
+
+        /* Generate and attach PDF proforma invoice */
         try {
-            return send_mail($subscription->user_email, $subject, $email_content, [
-                'anti_phishing_code' => $subscription->user_anti_phishing_code ?? null,
-                'language' => $language,
-            ]);
+            $invoice_row = db()->where('invoice_id', (int) $invoice_id)->getOne('invoices');
+            if($invoice_row) {
+                require_once APP_PATH . 'helpers/invoice_pdf.php';
+                $plan_model = new \Altum\Models\Plan();
+                $item = db()->where('invoice_id', $invoice_row->invoice_id)->getOne('invoice_items');
+                $invoice_billing = json_decode($invoice_row->billing ?? '');
+                if(!$invoice_billing && !empty($subscription->user_billing)) {
+                    $invoice_billing = json_decode($subscription->user_billing);
+                }
+                $user_notes = is_object($invoice_billing) ? ($invoice_billing->notes ?? null) : null;
+
+                $payment_obj = (object) [
+                    'id' => $invoice_row->invoice_id,
+                    'invoice_number' => $invoice_row->invoice_id,
+                    'invoice_status' => $invoice_row->status,
+                    'is_proforma' => true,
+                    'plan_id' => $invoice_row->plan_id,
+                    'billing' => $invoice_billing,
+                    'business' => $business,
+                    'plan' => (object) ['name' => $item->description ?? $plan->name ?? $invoice_row->plan_id],
+                    'plan_db' => $plan,
+                    'frequency' => $invoice_row->frequency,
+                    'code' => $invoice_row->code,
+                    'base_amount' => $invoice_row->subtotal_amount ?: $invoice_row->total_amount,
+                    'discount_amount' => $invoice_row->discount_amount,
+                    'total_amount' => $invoice_row->total_amount,
+                    'currency' => $invoice_row->currency,
+                    'processor' => $invoice_row->processor,
+                    'taxes_ids' => $invoice_row->taxes_ids,
+                    'status' => 0,
+                    'datetime' => $invoice_row->datetime,
+                    'due_datetime' => $invoice_row->due_datetime,
+                    'paid_datetime' => null,
+                    'period_start' => $period_start,
+                    'period_end' => $period_end,
+                    'name' => $subscription->user_name ?? null,
+                    'email' => $subscription->user_email ?? null,
+                ];
+
+                $payment_taxes = $plan_model->get_plan_taxes_by_taxes_ids($invoice_row->taxes_ids) ?: [];
+                $base_amount = (float) (($payment_obj->base_amount ?? 0) ?: ($payment_obj->total_amount ?? 0));
+                $discount_amount = (float) ($payment_obj->discount_amount ?? 0);
+                $payment_obj->price = $discount_amount ? $base_amount - $discount_amount : $base_amount;
+
+                if(!empty($payment_taxes)) {
+                    $inclusive_taxes_total_percentage = 0;
+                    foreach($payment_taxes as $row) {
+                        if($row->type == 'exclusive') continue;
+                        $inclusive_taxes_total_percentage += $row->value;
+                    }
+
+                    $total_inclusive_tax = $inclusive_taxes_total_percentage > 0 ? $payment_obj->price - ($payment_obj->price / (1 + $inclusive_taxes_total_percentage / 100)) : 0;
+                    $price_without_inclusive_taxes = $payment_obj->price - $total_inclusive_tax;
+
+                    foreach($payment_taxes as $key => $row) {
+                        if($row->type == 'exclusive') continue;
+                        $percentage_of_total_inclusive_tax = $inclusive_taxes_total_percentage > 0 ? $row->value * 100 / $inclusive_taxes_total_percentage : 0;
+                        $payment_taxes[$key]->amount = round($total_inclusive_tax * $percentage_of_total_inclusive_tax / 100, 2);
+                    }
+
+                    foreach($payment_taxes as $key => $row) {
+                        if($row->type == 'inclusive') continue;
+                        $payment_taxes[$key]->amount = round($row->value_type == 'percentage' ? $price_without_inclusive_taxes * ($row->value / 100) : $row->value, 2);
+                    }
+                }
+
+                $pdf_content = (new \Altum\Helpers\InvoicePdf())->render($payment_obj, $payment_taxes, ['notes' => $user_notes]);
+                $filename = strtolower(trim(preg_replace('/[^a-zA-Z0-9-_]+/', '-', 'proforma-invoice-' . $invoice_number), '-')) . '.pdf';
+
+                $options['string_attachments'] = [
+                    [
+                        'content' => $pdf_content,
+                        'filename' => $filename,
+                        'encoding' => 'base64',
+                        'type' => 'application/pdf',
+                    ]
+                ];
+            }
+        } catch(\Throwable $exception) {
+            if(DEBUG) {
+                echo $exception->getMessage();
+            }
+        }
+
+        try {
+            return send_mail($subscription->user_email, $subject, $email_content, $options);
         } catch(\Throwable $exception) {
             if(DEBUG) {
                 echo $exception->getMessage();

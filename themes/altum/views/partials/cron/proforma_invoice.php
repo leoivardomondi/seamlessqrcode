@@ -80,6 +80,8 @@ $is_kenyan_account = (
 <p style="font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
     You can log in to your client area to view and pay the invoice at
     <a href="<?= $data->invoice_url ?>" style="color: <?= settings()->smtp->button_background_color ?? '#15c' ?>; word-break: break-all;"><?= $data->invoice_url ?></a>
+    <br /><br />
+    A PDF copy of this proforma invoice is also attached to this email for your convenience and records.
 </p>
 
 <?php if(!empty($data->pay_now_url)): ?>
