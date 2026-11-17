@@ -122,31 +122,22 @@ $selected_payment_type = isset($_GET['payment_type']) && in_array($_GET['payment
         </div>
 
         <?php if(!empty($data->invoice_data)): ?>
-            <div class="card border-0 shadow-sm mb-4" style="background-color: #f0fdf4; border-left: 5px solid #22c55e !important;">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                        <div>
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="badge badge-primary mr-2"><i class="fas fa-file-invoice mr-1"></i> Proforma Invoice #<?= $data->invoice_data['invoice_number'] ?></span>
-                                <span class="badge badge-success"><i class="fas fa-bolt mr-1"></i> Instant Activation</span>
-                            </div>
-                            <h5 class="font-weight-bold mb-1" style="color: #14532d;">
-                                Pay <?= nr($data->invoice_data['amount'], 2) ?> <?= $data->invoice_data['currency'] ?> for <?= e($data->invoice_data['plan_name']) ?> (<?= ucfirst($data->invoice_data['frequency']) ?>)
-                            </h5>
-                            <div class="text-muted small">
-                                <i class="fas fa-calendar-alt mr-1"></i> Activation period: <strong><?= \Altum\Date::get($data->invoice_data['period_start'], 1) ?> – <?= \Altum\Date::get($data->invoice_data['period_end'], 1) ?></strong>
-                                <?php if(!empty($data->invoice_data['email'])): ?>
-                                    &bull; <i class="fas fa-envelope mr-1"></i> Linked account: <strong><?= e($data->invoice_data['email']) ?></strong>
-                                <?php endif ?>
-                            </div>
-                            <div class="small text-success mt-1">
-                                <i class="fas fa-check-circle mr-1"></i> Complete payment below to activate your account and subscription instantly.
-                            </div>
-                        </div>
-                        <div class="mt-3 mt-md-0 text-md-right">
-                            <span class="h3 font-weight-bolder text-success mb-0"><?= nr($data->invoice_data['amount'], 2) ?> <small><?= $data->invoice_data['currency'] ?></small></span>
-                        </div>
+            <div class="alert alert-success d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4" role="alert">
+                <div>
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fas fa-fw fa-file-invoice mr-2"></i>
+                        <strong class="mr-2">Proforma Invoice #<?= $data->invoice_data['invoice_number'] ?></strong>
+                        <span class="badge badge-success"><?= ucfirst($data->invoice_data['frequency']) ?></span>
                     </div>
+                    <div class="text-muted small">
+                        <?= e($data->invoice_data['plan_name']) ?> &bull; <?= \Altum\Date::get($data->invoice_data['period_start'], 1) ?> – <?= \Altum\Date::get($data->invoice_data['period_end'], 1) ?>
+                        <?php if(!empty($data->invoice_data['email'])): ?>
+                            &bull; <?= e($data->invoice_data['email']) ?>
+                        <?php endif ?>
+                    </div>
+                </div>
+                <div class="mt-2 mt-md-0 text-md-right">
+                    <span class="h4 font-weight-bold mb-0"><?= nr($data->invoice_data['amount'], 2) ?> <small><?= $data->invoice_data['currency'] ?></small></span>
                 </div>
             </div>
         <?php endif ?>
