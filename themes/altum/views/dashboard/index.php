@@ -9,33 +9,23 @@
     ?>
 
     <?php if($dash_user_plan_is_expired): ?>
-        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-left: 5px solid #f97316 !important;">
-            <div class="card-body p-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
-                <div class="mb-3 mb-md-0 mr-md-4">
-                    <div class="d-flex align-items-center mb-1">
-                        <span class="badge badge-warning text-uppercase px-2 py-1 mr-2"><i class="fas fa-exclamation-circle mr-1"></i> Subscription Expired</span>
-                        <h5 class="h5 mb-0 font-weight-bold text-dark">Reactivate your subscription</h5>
-                    </div>
-                    <p class="mb-0 text-muted">Your subscription has expired. Reactivate now to keep all your dynamic QR codes and short links active and enjoy unlimited scans and analytics.</p>
-                </div>
-                <div class="flex-shrink-0">
-                    <a href="<?= url('plan/renew') ?>" class="btn btn-warning btn-lg font-weight-bold shadow-sm px-4 py-2 text-dark"><i class="fas fa-credit-card mr-2"></i> Pay Now / Reactivate</a>
-                </div>
+        <div class="alert alert-warning d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4" role="alert">
+            <div class="d-flex align-items-center mb-2 mb-md-0">
+                <i class="fas fa-fw fa-exclamation-triangle mr-2"></i>
+                <span>Your subscription has expired. Renew your plan to keep your dynamic QR codes active.</span>
+            </div>
+            <div>
+                <a href="<?= url('plan/renew') ?>" class="btn btn-sm btn-warning font-weight-bold text-dark ml-md-3"><i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now</a>
             </div>
         </div>
     <?php elseif(!$dash_user_is_paid_active): ?>
-        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 5px solid #2563eb !important;">
-            <div class="card-body p-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
-                <div class="mb-3 mb-md-0 mr-md-4">
-                    <div class="d-flex align-items-center mb-1">
-                        <span class="badge badge-primary text-uppercase px-2 py-1 mr-2"><i class="fas fa-star mr-1"></i> Free Plan</span>
-                        <h5 class="h5 mb-0 font-weight-bold text-dark">Start your subscription</h5>
-                    </div>
-                    <p class="mb-0 text-muted">Upgrade today to unlock unlimited dynamic QR codes, custom domains, high-resolution downloads, and detailed scan analytics.</p>
-                </div>
-                <div class="flex-shrink-0">
-                    <a href="<?= url('plan') ?>" class="btn btn-primary btn-lg font-weight-bold shadow-sm px-4 py-2"><i class="fas fa-credit-card mr-2"></i> Pay Now</a>
-                </div>
+        <div class="alert alert-info d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4" role="alert">
+            <div class="d-flex align-items-center mb-2 mb-md-0">
+                <i class="fas fa-fw fa-info-circle mr-2"></i>
+                <span>You are currently on the Free plan. Upgrade to unlock all features.</span>
+            </div>
+            <div>
+                <a href="<?= url('plan') ?>" class="btn btn-sm btn-primary font-weight-bold ml-md-3"><i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now</a>
             </div>
         </div>
     <?php endif ?>

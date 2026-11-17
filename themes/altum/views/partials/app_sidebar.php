@@ -222,7 +222,7 @@
             <div class="px-3 mb-3 d-none d-md-block app-sidebar-pay-wrapper">
                 <?php if($sidebar_user_plan_is_expired): ?>
                     <a href="<?= url('plan/renew') ?>" class="btn btn-sm btn-block btn-warning font-weight-bold shadow-sm text-dark">
-                        <i class="fas fa-fw fa-sync-alt mr-1"></i> Reactivate Plan
+                        <i class="fas fa-fw fa-credit-card mr-1"></i> Pay Now
                     </a>
                 <?php else: ?>
                     <a href="<?= url('plan') ?>" class="btn btn-sm btn-block btn-primary font-weight-bold shadow-sm">
