@@ -543,6 +543,7 @@ class Cron extends Controller {
             $support_email = !empty(settings()->smtp->from) ? settings()->smtp->from : 'support@seamlessqrcode.com';
             $support_url = url('contact');
             $renew_url = \Altum\Models\Payments::generate_direct_payment_link($user->user_id, $user->plan_id, $latest_payment->frequency ?? null);
+            $login_pay_url = url('login?redirect=' . ($user->plan_id && is_numeric($user->plan_id) ? 'pay/' . (int) $user->plan_id : 'pay/direct'));
             $plan_name = $plans[$user->plan_id]->name ?? 'Subscription';
             $user_name = !empty($user->name) ? $user->name : explode('@', $user->email)[0];
             $expiration_date_display = \Altum\Date::get($user->plan_expiration_date, 2);
@@ -594,8 +595,11 @@ class Cron extends Controller {
                 </p>
 
                 <div style="margin: 20px 0 28px 0;">
-                    <a href="' . $renew_url . '" class="cta" style="background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">
-                        Renew your subscription now &rarr;
+                    <a href="' . $renew_url . '" class="cta" style="background-color: #1b1b1b; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block; margin: 6px 10px 6px 0;">
+                        Pay Now &rarr;
+                    </a>
+                    <a href="' . $login_pay_url . '" class="cta" style="background-color: #ffffff; color: #1b1b1b; border: 1px solid #1b1b1b; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block; margin: 6px 0;">
+                        Log in &amp; Pay &rarr;
                     </a>
                 </div>
 
