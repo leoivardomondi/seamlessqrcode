@@ -12,7 +12,10 @@ class PayThankYou extends Controller {
 
     public function index() {
 
-        \Altum\Authentication::guard();
+        $is_signed_guest = !empty($_GET['uid']) && !empty($_GET['sig']) && \Altum\Models\Payments::verify_direct_payment_signature((int) $_GET['uid'], (string) $_GET['sig']);
+        if(!\Altum\Authentication::check() && !$is_signed_guest && empty($_GET['invoice_id'])) {
+            \Altum\Authentication::guard();
+        }
 
         if(!settings()->payment->is_enabled) {
             redirect('not-found');

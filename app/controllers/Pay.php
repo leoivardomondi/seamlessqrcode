@@ -31,17 +31,21 @@ class Pay extends Controller {
         $invoice_id = isset($_GET['invoice_id']) ? (int) $_GET['invoice_id'] : null;
 
         if(!\Altum\Authentication::check()) {
-            if($invoice_id && ($invoice = db()->where('invoice_id', $invoice_id)->getOne('invoices'))) {
+            $guest_user_id = null;
+
+            /* Signed direct payment link (e.g. from renewal / expired plan emails) — no login required */
+            if(!empty($_GET['uid']) && !empty($_GET['sig']) && \Altum\Models\Payments::verify_direct_payment_signature((int) $_GET['uid'], (string) $_GET['sig'])) {
+                $guest_user_id = (int) $_GET['uid'];
+            } elseif($invoice_id && ($invoice = db()->where('invoice_id', $invoice_id)->getOne('invoices'))) {
                 /* Public pay now link for invoice linked to customer email */
-                $customer_user = db()->where('user_id', $invoice->user_id)->getOne('users');
-                if($customer_user) {
-                    $customer_user->billing = json_decode($customer_user->billing ?? '');
-                    $customer_user->preferences = json_decode($customer_user->preferences ?? '');
-                    $customer_user->plan_trial_done = 1;
-                    $this->user = $customer_user;
-                } else {
-                    \Altum\Authentication::guard();
-                }
+                $guest_user_id = (int) $invoice->user_id;
+            }
+
+            if($guest_user_id && ($customer_user = db()->where('user_id', $guest_user_id)->getOne('users'))) {
+                $customer_user->billing = json_decode($customer_user->billing ?? '');
+                $customer_user->preferences = json_decode($customer_user->preferences ?? '');
+                $customer_user->plan_trial_done = 1;
+                $this->user = $customer_user;
             } else {
                 \Altum\Authentication::guard();
             }
@@ -570,6 +574,10 @@ class Pay extends Controller {
 
         if(isset($_GET['invoice_id'])) {
             $parameters .= '&invoice_id=' . (int) $_GET['invoice_id'];
+        }
+
+        if(!empty($_GET['uid']) && !empty($_GET['sig'])) {
+            $parameters .= '&uid=' . (int) $_GET['uid'] . '&sig=' . urlencode((string) $_GET['sig']);
         }
 
         return $parameters;

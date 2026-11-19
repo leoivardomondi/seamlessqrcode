@@ -232,4 +232,37 @@ class AdminUsers extends Controller {
         redirect('admin/users');
     }
 
+    public function resend_plan_expired() {
+
+        if(!\Altum\Authentication::is_admin()) {
+            redirect('admin/users');
+        }
+
+        $user_id = isset($this->params[0]) ? (int) $this->params[0] : null;
+
+        if(!\Altum\Csrf::check('global_token')) {
+            Alerts::add_error(l('global.error_message.invalid_csrf_token'));
+            redirect('admin/users');
+        }
+
+        if(!$user = db()->where('user_id', $user_id)->getOne('users')) {
+            redirect('admin/users');
+        }
+
+        $sent = \Altum\Models\Payments::send_user_plan_expired_email($user);
+
+        if($sent) {
+            Alerts::add_success('Plan expired email with direct payment link has been resent to <strong>' . htmlspecialchars($user->email) . '</strong>.');
+        } else {
+            Alerts::add_error('Could not send the plan expired email to <strong>' . htmlspecialchars($user->email) . '</strong>.');
+        }
+
+        if(!empty($_SERVER['HTTP_REFERER']) && str_starts_with($_SERVER['HTTP_REFERER'], SITE_URL)) {
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            die();
+        }
+
+        redirect('admin/users');
+    }
+
 }

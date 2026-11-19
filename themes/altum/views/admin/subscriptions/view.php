@@ -73,6 +73,9 @@ $manual_period_payment_datetime = (new \DateTime())->format('Y-m-d\TH:i');
                 <a href="<?= url('admin/subscriptions/sync_from_user/' . $subscription->subscription_id . '?global_token=' . \Altum\Csrf::get('global_token')) ?>" class="dropdown-item">
                     <i class="fas fa-fw fa-sm fa-user-check mr-2"></i> <?= l('admin_subscriptions.action.sync_from_user') ?>
                 </a>
+                <a href="<?= url('admin/subscriptions/resend_plan_expired/' . $subscription->subscription_id . '?global_token=' . \Altum\Csrf::get('global_token')) ?>" class="dropdown-item" onclick="return confirm('Resend the plan expired email with a direct payment link to this user?')">
+                    <i class="fas fa-fw fa-sm fa-paper-plane mr-2"></i> Resend Plan Expired Email
+                </a>
                 <a href="<?= url('admin/subscriptions/mark_past_due/' . $subscription->subscription_id . '?global_token=' . \Altum\Csrf::get('global_token')) ?>" class="dropdown-item">
                     <i class="fas fa-fw fa-sm fa-exclamation-circle mr-2"></i> <?= l('admin_subscriptions.action.mark_past_due') ?>
                 </a>

@@ -1470,6 +1470,11 @@ class Subscription extends Model {
             'trial_skip' => 'true',
         ];
 
+        if(!empty($subscription->user_id)) {
+            $query['uid'] = (int) $subscription->user_id;
+            $query['sig'] = \Altum\Models\Payments::generate_direct_payment_signature((int) $subscription->user_id);
+        }
+
         if(!empty($subscription->user_email)) {
             $query['email'] = $subscription->user_email;
         }

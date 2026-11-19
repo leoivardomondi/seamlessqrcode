@@ -14,6 +14,9 @@
         <?php if(\Altum\Authentication::is_superadmin() || ((int) ($data->type ?? 0) === 0 && \Altum\Authentication::is_admin())): ?>
             <a href="#" data-toggle="modal" data-target="#user_login_modal" data-user-id="<?= $data->id ?>" class="dropdown-item"><i class="fas fa-fw fa-sm fa-sign-in-alt mr-2"></i> <?= l('global.login') ?></a>
         <?php endif ?>
+        <?php if(\Altum\Authentication::is_admin()): ?>
+            <a href="<?= url('admin/users/resend_plan_expired/' . $data->id . '?global_token=' . \Altum\Csrf::get('global_token')) ?>" class="dropdown-item" onclick="return confirm('Resend the plan expired email with a direct payment link to this user?')"><i class="fas fa-fw fa-sm fa-paper-plane mr-2"></i> Resend Plan Expired Email</a>
+        <?php endif ?>
     </div>
 </div>
 

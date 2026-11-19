@@ -134,22 +134,8 @@ class Cron extends Controller {
                 'plan_trial_done' => 1,
             ]);
 
-            /* Prepare the email */
-            $plan_name = $plans[$user->plan_id]->name ?? '';
-            $email_template = get_email_template(
-                [
-                    '{{PLAN_NAME}}' => $plan_name,
-                ],
-                l('global.emails.user_plan_expired.subject', $user->language),
-                [
-                    '{{USER_PLAN_RENEW_LINK}}' => url('pay/' . $user->plan_id),
-                    '{{NAME}}' => $user->name,
-                    '{{PLAN_NAME}}' => $plan_name,
-                ],
-                l('global.emails.user_plan_expired.body', $user->language)
-            );
-
-            send_mail($user->email, $email_template->subject, $email_template->body, ['anti_phishing_code' => $user->anti_phishing_code, 'language' => $user->language]);
+            /* Send the plan expired email with direct no-login Paystack payment link */
+            \Altum\Models\Payments::send_user_plan_expired_email($user, $user->plan_id, $plans[$user->plan_id]->name ?? null);
 
             /* Clear the cache */
             cache()->deleteItemsByTag('user_id=' .  \Altum\Authentication::$user_id);
@@ -556,7 +542,7 @@ class Cron extends Controller {
             $website_title = settings()->main->title ?: 'SeamlessQRCode';
             $support_email = !empty(settings()->smtp->from) ? settings()->smtp->from : 'support@seamlessqrcode.com';
             $support_url = url('contact');
-            $renew_url = url('pay/' . $user->plan_id);
+            $renew_url = \Altum\Models\Payments::generate_direct_payment_link($user->user_id, $user->plan_id, $latest_payment->frequency ?? null);
             $plan_name = $plans[$user->plan_id]->name ?? 'Subscription';
             $user_name = !empty($user->name) ? $user->name : explode('@', $user->email)[0];
             $expiration_date_display = \Altum\Date::get($user->plan_expiration_date, 2);

@@ -311,6 +311,29 @@ class AdminSubscriptions extends Controller {
         redirect('admin/subscriptions/view/' . $subscription->subscription_id);
     }
 
+    public function resend_plan_expired() {
+        $this->guard_action();
+
+        $subscription_model = new Subscription();
+        $subscription = $this->get_subscription_or_redirect($subscription_model);
+        $user = db()->where('user_id', $subscription->user_id)->getOne('users');
+
+        if(!$user) {
+            Alerts::add_error(l('global.error_message.basic'));
+            redirect('admin/subscriptions/view/' . $subscription->subscription_id);
+        }
+
+        $sent = \Altum\Models\Payments::send_user_plan_expired_email($user, $subscription->plan_id);
+
+        if($sent) {
+            Alerts::add_success('Plan expired email with direct payment link has been resent to <strong>' . htmlspecialchars($user->email) . '</strong>.');
+        } else {
+            Alerts::add_error('Could not send the plan expired email to <strong>' . htmlspecialchars($user->email) . '</strong>.');
+        }
+
+        redirect('admin/subscriptions/view/' . $subscription->subscription_id);
+    }
+
     private function guard_action() {
         if(!\Altum\Csrf::check('global_token')) {
             Alerts::add_error(l('global.error_message.invalid_csrf_token'));

@@ -637,4 +637,93 @@ class Payments extends Model {
             $mail_data
         );
     }
+
+    public static function generate_direct_payment_signature($user_id) {
+        $secret = (defined('DATABASE_PASSWORD') ? DATABASE_PASSWORD : '') . '|' . (settings()->paystack->secret_key ?? '') . '|direct_pay_v1';
+        return hash_hmac('sha256', 'direct_pay:' . (int) $user_id, $secret);
+    }
+
+    public static function verify_direct_payment_signature($user_id, $signature) {
+        if((int) $user_id <= 0 || empty($signature)) {
+            return false;
+        }
+        return hash_equals(self::generate_direct_payment_signature((int) $user_id), (string) $signature);
+    }
+
+    public static function generate_direct_payment_link($user_id, $plan_id = null, $frequency = null, $invoice_id = null) {
+        $target = ($plan_id && is_numeric($plan_id)) ? (int) $plan_id : 'direct';
+
+        $query = [
+            'direct' => 'paystack',
+            'uid' => (int) $user_id,
+            'trial_skip' => 'true',
+            'sig' => self::generate_direct_payment_signature((int) $user_id),
+        ];
+
+        if($frequency && in_array($frequency, ['monthly', 'quarterly', 'biannual', 'annual', 'lifetime'])) {
+            $query['payment_frequency'] = $frequency;
+        }
+
+        if($invoice_id) {
+            $query['invoice_id'] = (int) $invoice_id;
+        }
+
+        return url('pay/' . $target . '?' . http_build_query($query));
+    }
+
+    public static function send_user_plan_expired_email($user, $plan_id = null, $plan_name = null) {
+        if(!$user || empty($user->email)) {
+            return false;
+        }
+
+        /* Resolve the user's expired/last paid plan if not provided or if already reverted to free */
+        if(!$plan_id || !is_numeric($plan_id)) {
+            if(!empty($user->plan_id) && is_numeric($user->plan_id)) {
+                $plan_id = (int) $user->plan_id;
+            } else {
+                $last_sub_plan = db()->where('user_id', $user->user_id)->orderBy('subscription_id', 'DESC')->getValue('subscriptions', 'plan_id');
+                if($last_sub_plan && is_numeric($last_sub_plan)) {
+                    $plan_id = (int) $last_sub_plan;
+                } else {
+                    $last_pay_plan = db()->where('user_id', $user->user_id)->where('status', 1)->orderBy('payment_id', 'DESC')->getValue('payments', 'plan_id');
+                    if($last_pay_plan && is_numeric($last_pay_plan)) {
+                        $plan_id = (int) $last_pay_plan;
+                    }
+                }
+            }
+        }
+
+        /* Resolve plan name */
+        if(!$plan_name && $plan_id && is_numeric($plan_id)) {
+            $plan = (new \Altum\Models\Plan())->get_plan_by_id((int) $plan_id);
+            $plan_name = $plan->name ?? null;
+        }
+        $plan_name = $plan_name ?: 'Subscription';
+
+        /* Direct signed Paystack payment link (no login required) */
+        $renew_link = self::generate_direct_payment_link($user->user_id, $plan_id);
+
+        $email_template = get_email_template(
+            [
+                '{{PLAN_NAME}}' => $plan_name,
+            ],
+            l('global.emails.user_plan_expired.subject', $user->language ?? null),
+            [
+                '{{USER_PLAN_RENEW_LINK}}' => $renew_link,
+                '{{NAME}}' => $user->name ?: explode('@', $user->email)[0],
+                '{{PLAN_NAME}}' => $plan_name,
+            ],
+            l('global.emails.user_plan_expired.body', $user->language ?? null)
+        );
+
+        return send_mail(
+            $user->email,
+            $email_template->subject,
+            $email_template->body,
+            [
+                'anti_phishing_code' => $user->anti_phishing_code ?? null,
+                'language' => $user->language ?? null,
+            ]
+        );
+    }
 }
