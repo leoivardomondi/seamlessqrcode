@@ -334,6 +334,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -434,6 +435,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -494,6 +496,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -598,6 +601,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -640,6 +644,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -690,6 +695,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -762,6 +768,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -852,6 +859,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -932,6 +940,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1043,6 +1052,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -1127,6 +1137,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1231,6 +1242,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -1289,6 +1301,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1345,6 +1358,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -1398,6 +1412,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1474,6 +1489,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -1533,6 +1549,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1618,6 +1635,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -1672,6 +1690,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1734,6 +1753,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -1796,6 +1816,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -1906,6 +1927,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
 
             /* Notifications */
             'notifications' => $_POST['notifications'],
@@ -1961,6 +1983,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2039,6 +2062,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2077,6 +2101,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2120,6 +2145,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2158,6 +2184,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2201,6 +2228,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2257,6 +2285,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ];
         $settings = json_encode($settings);
 
@@ -2415,6 +2444,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
         $settings = json_encode($settings);
 
@@ -2466,6 +2496,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2521,6 +2552,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2568,6 +2600,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2627,6 +2660,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2668,6 +2702,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2717,6 +2752,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2768,6 +2804,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2841,6 +2878,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -2888,6 +2926,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -2966,6 +3005,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3030,6 +3070,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -3112,6 +3153,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3179,6 +3221,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -3268,6 +3311,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3333,6 +3377,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -3423,6 +3468,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3488,6 +3534,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -3576,6 +3623,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3612,6 +3660,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -3655,6 +3704,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3693,6 +3743,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -3738,6 +3789,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -3778,6 +3830,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ];
 
         if($type == 'video') {
@@ -3883,6 +3936,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ];
 
         if(in_array($type, ['file', 'pdf_document', 'powerpoint_presentation', 'excel_spreadsheet'])) {
@@ -3981,6 +4035,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -4066,6 +4121,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -4127,6 +4183,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -4229,6 +4286,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -4285,6 +4343,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -4381,6 +4440,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -4438,6 +4498,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -4539,6 +4600,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -4592,6 +4654,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -4668,6 +4731,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -4734,6 +4798,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -4842,6 +4907,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -4903,6 +4969,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -5014,6 +5081,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         db()->where('biolink_block_id', $_POST['biolink_block_id'])->update('biolinks_blocks', [
@@ -5076,6 +5144,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -5191,6 +5260,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         db()->where('biolink_block_id', $_POST['biolink_block_id'])->update('biolinks_blocks', [
@@ -5253,6 +5323,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -5427,6 +5498,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         db()->where('biolink_block_id', $_POST['biolink_block_id'])->update('biolinks_blocks', [
@@ -5492,6 +5564,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ];
         $settings = json_encode($settings);
 
@@ -5622,6 +5695,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         db()->where('biolink_block_id', $_POST['biolink_block_id'])->update('biolinks_blocks', [
@@ -5687,6 +5761,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ];
         $settings = json_encode($settings);
 
@@ -5819,6 +5894,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         db()->where('biolink_block_id', $_POST['biolink_block_id'])->update('biolinks_blocks', [
@@ -5881,6 +5957,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ];
         $settings = json_encode($settings);
 
@@ -6005,6 +6082,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         db()->where('biolink_block_id', $_POST['biolink_block_id'])->update('biolinks_blocks', [
@@ -6047,6 +6125,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ]);
 
         $settings = $this->process_biolink_theme_id_settings($link, $settings, $type);
@@ -6113,6 +6192,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ]);
 
         /* Database query */
@@ -6144,6 +6224,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => [],
             'display_operating_systems' => [],
             'display_browsers' => [],
+            'display_days' => [],
         ];
 
         if($_POST['theme']) {
@@ -6238,6 +6319,7 @@ class BiolinkBlockAjax extends Controller {
             'display_languages' => $_POST['display_languages'],
             'display_operating_systems' => $_POST['display_operating_systems'],
             'display_browsers' => $_POST['display_browsers'],
+            'display_days' => $_POST['display_days'],
         ];
 
         if($_POST['theme']) {
@@ -6486,6 +6568,12 @@ class BiolinkBlockAjax extends Controller {
         } else {
             $_POST['start_date'] = $_POST['end_date'] = null;
         }
+
+        $_POST['display_days'] = $_POST['schedule']
+            ? array_values(array_unique(array_map('intval', array_filter($_POST['display_days'] ?? [], function($day) {
+                return in_array((int) $day, [1, 2, 3, 4, 5, 6, 7], true);
+            }))))
+            : [];
 
         $_POST['display_continents'] = array_filter($_POST['display_continents'] ?? [], function($country) {
             return array_key_exists($country, get_continents_array());

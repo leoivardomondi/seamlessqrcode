@@ -68,6 +68,20 @@
                                 continue;
                             }
 
+                            /* Check if block is scheduled for specific days of the week */
+                            if(!empty($row->settings->display_days) && is_array($row->settings->display_days)) {
+                                $owner_timezone = !empty($data->user->timezone) ? $data->user->timezone : \Altum\Date::$default_timezone;
+                                try {
+                                    $current_day_of_week = (int) (new \DateTime('now', new \DateTimeZone($owner_timezone)))->format('N');
+                                } catch(\Exception $exception) {
+                                    $current_day_of_week = (int) date('N');
+                                }
+
+                                if(!in_array($current_day_of_week, array_map('intval', $row->settings->display_days), true)) {
+                                    continue;
+                                }
+                            }
+
                             /* Check if the user has permissions to use the link */
                             if(!$data->user->plan_settings->enabled_biolink_blocks->{$row->type}) {
                                 continue;

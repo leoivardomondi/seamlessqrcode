@@ -700,6 +700,7 @@ class Payments extends Model {
         }
         $plan_name = $plan_name ?: 'Subscription';
 
+        /* Direct signed Paystack payment link (no login required) */
         /* Direct signed Paystack payment link (no login required) & Login + Pay link */
         $renew_link = self::generate_direct_payment_link($user->user_id, $plan_id);
         $login_pay_link = url('login?redirect=' . ($plan_id && is_numeric($plan_id) ? 'pay/' . (int) $plan_id : 'pay/direct'));

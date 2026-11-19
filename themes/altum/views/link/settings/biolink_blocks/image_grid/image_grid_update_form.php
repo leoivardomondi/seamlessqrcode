@@ -79,7 +79,7 @@
                             id="<?= 'link_schedule_' . $row->biolink_block_id ?>"
                             name="schedule" type="checkbox"
                             class="custom-control-input"
-                        <?= !empty($row->start_date) && !empty($row->end_date) ? 'checked="checked"' : null ?>
+                        <?= (!empty($row->start_date) && !empty($row->end_date)) || !empty($row->settings->display_days) ? 'checked="checked"' : null ?>
                         <?= $this->user->plan_settings->temporary_url_is_enabled ? null : 'disabled="disabled"' ?>
                     >
                     <label class="custom-control-label" for="<?= 'link_schedule_' . $row->biolink_block_id ?>"><?= l('link.settings.schedule') ?></label>
@@ -91,6 +91,8 @@
         <div class="mt-3 schedule_container" style="display: none;">
             <div <?= $this->user->plan_settings->temporary_url_is_enabled ? null : get_plan_feature_disabled_info() ?>>
                 <div class="<?= $this->user->plan_settings->temporary_url_is_enabled ? null : 'container-disabled' ?>">
+                    <?= include_view(THEME_PATH . 'views/link/settings/biolink_blocks/schedule_days.php', ['row' => $row]) ?>
+
                     <div class="row">
                         <div class="col">
                             <div class="form-group">

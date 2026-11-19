@@ -595,6 +595,8 @@ class Cron extends Controller {
                 </p>
 
                 <div style="margin: 20px 0 28px 0;">
+                    <a href="' . $renew_url . '" class="cta" style="background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">
+                        Renew your subscription now &rarr;
                     <a href="' . $renew_url . '" class="cta" style="background-color: #1b1b1b; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block; margin: 6px 10px 6px 0;">
                         Pay Now &rarr;
                     </a>
