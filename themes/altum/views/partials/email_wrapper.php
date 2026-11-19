@@ -156,9 +156,12 @@
         }
 
         a.cta {
+            display: inline-block;
             color: <?= settings()->smtp->button_text_color ?? '#ffffff' ?>;
             background-color: <?= settings()->smtp->button_background_color ?? '#1b1b1b' ?>;
             padding: 10px 14px;
+            margin: 10px 0;
+            line-height: 1.4;
             text-decoration: none;
             border-radius: <?= settings()->smtp->button_border_radius ?? '10' ?>px;
             font-weight: 600;

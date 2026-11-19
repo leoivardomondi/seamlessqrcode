@@ -135,13 +135,16 @@ class Cron extends Controller {
             ]);
 
             /* Prepare the email */
+            $plan_name = $plans[$user->plan_id]->name ?? '';
             $email_template = get_email_template(
-                [],
+                [
+                    '{{PLAN_NAME}}' => $plan_name,
+                ],
                 l('global.emails.user_plan_expired.subject', $user->language),
                 [
                     '{{USER_PLAN_RENEW_LINK}}' => url('pay/' . $user->plan_id),
                     '{{NAME}}' => $user->name,
-                    '{{PLAN_NAME}}' => $plans[$user->plan_id]->name,
+                    '{{PLAN_NAME}}' => $plan_name,
                 ],
                 l('global.emails.user_plan_expired.body', $user->language)
             );
